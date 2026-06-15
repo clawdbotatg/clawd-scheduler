@@ -20,7 +20,7 @@ many** — you do NOT re-clone each run.
 **Cold start (Canary closed, or clone on 9222 is down) — relaunch the existing clone:**
 ```bash
 nohup "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary" \
-  --user-data-dir="$HOME/clawd/browser-automation/profiles/canary-concurrence" \
+  --user-data-dir="$HOME/clawd/clawd-scheduler/profiles/canary-concurrence" \
   --remote-debugging-port=9222 \
   --no-first-run --no-default-browser-check --hide-crash-restore-bubble \
   about:blank >/tmp/canary-clone.log 2>&1 &
