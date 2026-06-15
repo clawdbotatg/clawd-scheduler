@@ -47,14 +47,25 @@ can run the whole thing and it only creates what's missing.
 
 - **Idempotent / no duplicates.** Every scheduling surface skips if already done
   (calendar link present · YouTube Upcoming · X Producer · slop.computer/). Re-run freely.
-- **Headless only.** Driving a headed clone steals the user's keyboard focus the
-  moment it navigates. Always launch clones `headless` (UA-spoof is baked in).
+- **Headless only — EXCEPT the on-chain step.** Driving a headed clone steals the
+  user's keyboard focus the moment it navigates, so launch clones `headless` (UA-spoof
+  is baked in) for every phase *except* `onchain`. The on-chain step needs a **visible**
+  9223 because the user must SEE and SIGN the wallet popup — a headless window has no
+  popup to approve and the tx just hangs. So before `onchain`, relaunch 9223 headed:
+  `bash launch-clone.sh "$PWD/profiles/chrome-ethereum" 9223 headed chrome` — then put
+  it **back to headless the instant they've signed**. Principle: stay headless by
+  default; go headed ONLY for the exact moment the user must sign (or you need them to
+  debug/see something), then revert. A lingering headed window keeps stealing focus.
 - **The relay token is PER-ROOM and SECRET.** Get each room's token via `copy-skill.js`.
   It lives only in the gitignored `.env` (`SLOP_TOKEN`) — never hardcode/commit it.
 - **On-chain = the USER signs the wallet tx.** `schedule-onchain.mjs` fills the date
   and clicks SCHEDULE EPISODE to *bring up* the tx; it NEVER signs and never touches
   the wallet password. It has a guard that refuses to click unless the datetime reads
-  back exactly right (it once fired an empty-time tx — never again).
+  back exactly right (it once fired an empty-time tx — never again). Run it against a
+  **headed** 9223 (see "Headless only" above), then **relaunch 9223 headless the moment
+  the user has signed** — a lingering headed window keeps stealing their foreground.
+  **While a signature is pending, do NOT drive 9223 for anything else** — connecting
+  another automation to that clone can drop the CDP session and disrupt signing.
 - **Telegram notify is a MANUAL send.** `notify-guest.mjs` copies the welcome message
   + room invite to the clipboard; the USER pastes & sends. NEVER auto-send a private
   link to a guessed Telegram contact (handles ≠ Twitter; misID risk).

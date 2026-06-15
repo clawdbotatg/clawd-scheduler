@@ -36,11 +36,26 @@
 // Discovery:  run `node resolve-guest.js` first to find+confirm the handle.
 // ───────────────────────────────────────────────────────────────────────────
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
 import { episode, TOKEN, PORTS } from './lib/config.js';
 
 const argv = process.argv.slice(2);
 const flag = (n) => argv.includes(`--${n}`);
 const opt = (n, d) => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : d; };
+
+// Calendar match default: the event title rarely contains the @handle (e.g.
+// @0xzak's calendar event is "Zak Cole and Austin Griffith"). Prefer the guest's
+// resolved episode title from data/guest-twitter.json (keyed by email; carries
+// handle + episode), falling back to the handle-as-words.
+function defaultMatch(h) {
+  try {
+    const cache = JSON.parse(fs.readFileSync(new URL('./data/guest-twitter.json', import.meta.url), 'utf8'));
+    const hit = Object.values(cache).find((v) => String(v.handle).toLowerCase() === h.toLowerCase());
+    if (hit?.episode) return hit.episode;                       // "Zak Cole and Austin Griffith"
+    if (hit?.name) { const n = hit.name.split('@')[0].trim(); if (n) return n; }
+  } catch { /* no cache — fall through */ }
+  return h.replace(/[_-]/g, ' ');
+}
 
 const handle = opt('handle');
 if (!handle) { console.error('usage: node slop-episode.mjs --handle <x> [--date .. --time .. --invite .. --go]\n(run resolve-guest.js first to discover the handle)'); process.exit(1); }
@@ -52,7 +67,7 @@ const DATE = opt('date', 'Jun 18, 2026');
 const TIME = opt('time', '9:30 AM');
 const DURATION = opt('duration', '70');             // X broadcast length in minutes
 const INVITE = opt('invite');                       // room share link (for calendar)
-const MATCH = opt('match', ep.handle.replace(/[_-]/g, ' ')); // calendar title match
+const MATCH = opt('match', defaultMatch(ep.handle)); // calendar title match
 const FROM = opt('from');
 const ONLY = opt('only');
 

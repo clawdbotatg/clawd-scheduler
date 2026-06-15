@@ -14,7 +14,15 @@ import { connectCDP } from './lib/connect.js';
 
 const args = process.argv.slice(2);
 const arg = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
-const DAY = arg('--day'); // YYYY/M/D
+// Accept either YYYY/M/D or a human "Mon DD, YYYY" (what the rest of the pipeline
+// passes via --date) — normalize to the YYYY/M/D the calendar day-view URL needs.
+const normDay = (d) => {
+  if (!d) return d;
+  const M = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  const hm = d.match(/^([A-Za-z]{3})[a-z]*\s+(\d{1,2}),\s*(\d{4})$/);
+  return hm ? `${hm[3]}/${M[hm[1].toLowerCase()]}/${Number(hm[2])}` : d;
+};
+const DAY = normDay(arg('--day')); // YYYY/M/D (or "Mon DD, YYYY" → normalized)
 const MATCH = arg('--match'); // substring of the event title to open
 const LINK = arg('--link'); // real room invite link
 const TOKEN = arg('--token'); // bearer for /v1/admin/questions

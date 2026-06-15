@@ -8,6 +8,7 @@
 //   NOTIFY_HANDLE=port_dev NOTIFY_INVITE='https://live.slop.computer/port-dev?invite=…' \
 //     node notify-guest.mjs [--link]
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
 import { episode } from './lib/config.js';
 
 const arg = (n) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
@@ -29,6 +30,10 @@ console.log('LINK:\n' + (INVITE || '(no invite link — pass NOTIFY_INVITE / --i
 // Default clipboard = the full message ready for ONE paste: blurb (single line)
 // + blank line + invite link. Only the newlines before the link are real.
 const FULL = INVITE ? `${BLURB}\n\n${INVITE}` : BLURB;
+// Also drop it to a file — the clipboard is easily clobbered before you paste;
+// `pbcopy < <file>` re-copies it without re-running the whole step.
+const NOTIFY_FILE = `/tmp/${ep.slug}-notify.txt`;
+try { fs.writeFileSync(NOTIFY_FILE, FULL + '\n'); } catch { /* non-fatal */ }
 if (wantLink) {
   if (!INVITE) { console.log('✗ no invite link to copy.'); process.exit(1); }
   console.log(copy(INVITE) ? '📋 just the LINK copied.' : '(could not copy — copy the LINK above manually)');
@@ -37,4 +42,5 @@ if (wantLink) {
     ? '📋 MESSAGE + link copied — paste ONCE into Telegram (blurb is one line; the only newlines are before the link). `--link` copies just the link.'
     : '(could not copy — copy the text above manually)');
 }
+console.log(`\n💾 also saved to ${NOTIFY_FILE} — re-copy anytime with: pbcopy < ${NOTIFY_FILE}`);
 console.log('\n⚠ You send this — never auto-sent to a guessed Telegram account.');

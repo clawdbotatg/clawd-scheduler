@@ -352,6 +352,11 @@ spoof should satisfy X Studio like it does YouTube, but verify.
 ## Detail — step 14: register on-chain (slop.computer)  ✅  · LAST · user signs
 `schedule-onchain.mjs` runs on the **9223 clone** (Chrome with **austingriffith.eth
 wallet connected**). Env: `X_HANDLE ONCHAIN_DATE ONCHAIN_TIME`; `--submit` to act.
+**This is the ONE step that must run against a HEADED 9223** — the user signs the
+wallet popup, which a headless window can't show. Relaunch headed first:
+`bash launch-clone.sh "$PWD/profiles/chrome-ethereum" 9223 headed chrome`. And while
+the signature is pending, don't run any other automation against 9223 (it can drop
+the CDP session and disrupt signing).
 1. **Idempotency:** load `slop.computer/` — if the slug already appears (scheduled
    episodes are listed there, e.g. "ADRIANLEB · GOING LIVE MON, JUN 15, 9:00 AM
    MT"), **SKIP** (no duplicate, no tx).
