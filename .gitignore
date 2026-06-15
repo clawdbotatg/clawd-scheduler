@@ -1,0 +1,20 @@
+# Logged-in browser profiles — live session cookies (~13GB). NEVER commit.
+profiles/
+# Recorded auth storage states — also secrets.
+*.auth.json
+storage/
+# Runtime caches with guest emails (PII), captured room skills, downloaded pfps.
+data/
+*-skill.txt
+*-pfp.*
+# Local secrets / env (but DO commit the .env.example template)
+.env
+.env.*
+!.env.example
+secret.local.js
+lib/secret.local.js
+# One-off scripts that carry a real room token / guest emails — keep local only.
+edit-port-event.js
+test-resolve-*.mjs
+# Deps
+node_modules/
