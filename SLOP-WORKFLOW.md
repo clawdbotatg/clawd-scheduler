@@ -158,6 +158,16 @@ Read-only unless marked **WRITE** (those have a confirm/ask gate). `<slug>` and
       form's datetime and (with `--submit`) clicks **SCHEDULE EPISODE** → a wallet
       transaction pops up that **the user signs** (the script never signs / never
       touches the wallet password).
+    - **datetime guard:** the script reads the field back and refuses to click
+      SCHEDULE EPISODE unless it equals the target (e.g. `2026-06-18T09:30`) — so it
+      can never fire a tx with an empty/wrong time (it did once; now guarded).
+
+15. **Notify the guest on Telegram**  ·  manual send  ·  ✅  ·  LAST
+    - `NOTIFY_HANDLE=.. NOTIFY_INVITE=<roomLink> node notify-guest.mjs [--link]`
+    - copies the welcome blurb + room invite to the clipboard as ONE paste (blurb
+      is a single line so Telegram soft-wraps it; the only newlines are before the
+      link). **The user pastes & sends it** — never auto-sent (a private invite to a
+      guessed Telegram contact is a misidentification risk).
 
 Below: per-phase detail + the hard-won gotchas (auth, avatar selector, slug rule,
 confidence threshold). The numbered list above is the canonical order.

@@ -24,7 +24,9 @@
 //
 // Scope flags:  --from <phase>   start at a phase (skip earlier)
 //               --only <phase>   run just one phase
-//   phases: room research pfp card publish calendar youtube twitter onchain
+//   phases: room research pfp card publish calendar youtube twitter onchain notify
+// `notify` is the manual-send finale: it copies the guest's Telegram welcome
+// message + room invite to the clipboard (you paste & send — never auto-sent).
 //
 // Per-episode inputs:  --handle (req) --token <roomToken> --date --time
 //                      --duration <min> (X broadcast length, default 70) --invite <roomUrl> --match
@@ -81,10 +83,13 @@ const phases = [
     cmd: [`x-schedule.mjs`, ...(flag('submit-twitter') ? ['--submit'] : [])],
     env: { X_HANDLE: ep.handle, X_DATE: DATE, X_TIME: TIME, X_DURATION_MIN: String(DURATION) },
     gate: { flag: 'submit-twitter', when: 'without it the form is filled but STOPS before create (review). NB: on X, Cancel/Escape DELETES — x-schedule finishes by navigating away.' } },
-  { name: 'onchain', desc: `register the episode on-chain via slop.computer (${DATE} ${TIME}) — LAST; YOU sign the wallet tx`,
+  { name: 'onchain', desc: `register the episode on-chain via slop.computer (${DATE} ${TIME}) — YOU sign the wallet tx`,
     cmd: [`schedule-onchain.mjs`, ...(flag('submit-onchain') ? ['--submit'] : [])],
     env: { X_HANDLE: ep.handle, ONCHAIN_DATE: DATE, ONCHAIN_TIME: TIME },
     gate: { flag: 'submit-onchain', when: 'skips if already on slop.computer; otherwise fills the form, and WITH the gate clicks SCHEDULE EPISODE → a wallet tx pops up for YOU to sign (the script never signs).' } },
+  { name: 'notify', desc: 'LAST: copy the guest Telegram welcome message + room invite to your clipboard (you paste/send it)',
+    cmd: [`notify-guest.mjs`],
+    env: { NOTIFY_HANDLE: ep.handle, NOTIFY_INVITE: INVITE || '' } },
 ];
 
 let list = phases;

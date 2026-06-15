@@ -27,7 +27,9 @@ console.log(`on-chain schedule: ${ep.slug} @ ${DTLOCAL}  submit=${SUBMIT}`);
 
 const browser = await chromium.connectOverCDP(`http://127.0.0.1:${PORT}`);
 const ctx = browser.contexts()[0];
-const pg = ctx.pages()[0] || (await ctx.newPage());
+// Open a fresh page (reliable; shares the wallet session in this context) —
+// reusing a stale tab from manual admin actions caused "Frame detached".
+const pg = await ctx.newPage();
 
 // 1) IDEMPOTENCY: is the slug already scheduled (shows on slop.computer/)?
 await pg.goto('https://slop.computer/', { waitUntil: 'domcontentloaded' });
@@ -44,29 +46,26 @@ if (already) {
 // 2) Not scheduled — open the schedule form and fill the SCHEDULE-section datetime.
 await pg.goto(`https://slop.computer/admin?liveSlugToSchedule=${ep.slug}`, { waitUntil: 'domcontentloaded' });
 await pg.waitForTimeout(7000);
-const set = await pg.evaluate((dt) => {
-  // find the "SCHEDULE EPISODE" button, then the datetime-local input in its section
+// Mark the SCHEDULE-section datetime-local (the one near the SCHEDULE EPISODE
+// button), then fill it with Playwright — reliable on React inputs (the raw
+// value-setter did NOT stick, and was also missing its arg).
+const marked = await pg.evaluate(() => {
   const btn = [...document.querySelectorAll('button,[role=button]')].find((b) => /SCHEDULE EPISODE/i.test(b.innerText || ''));
-  if (!btn) return { ok: false, why: 'no SCHEDULE EPISODE button' };
-  let scope = btn;
-  for (let i = 0; i < 6 && scope; i++) {
-    const dtl = scope.querySelector?.('input[type="datetime-local"]');
-    if (dtl) {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-      setter.call(dtl, dt);
-      dtl.dispatchEvent(new Event('input', { bubbles: true }));
-      dtl.dispatchEvent(new Event('change', { bubbles: true }));
-      return { ok: true, val: dtl.value };
-    }
-    scope = scope.parentElement;
-  }
-  return { ok: false, why: 'no datetime-local near the button' };
+  if (!btn) return false;
+  let s = btn;
+  for (let i = 0; i < 6 && s; i++) { const dtl = s.querySelector?.('input[type="datetime-local"]'); if (dtl) { dtl.setAttribute('data-sched-dt', '1'); return true; } s = s.parentElement; }
+  return false;
 });
-console.log('datetime set:', JSON.stringify(set));
+if (!marked) { console.log('✗ no datetime-local in the SCHEDULE section.'); await browser.close(); process.exit(2); }
+await pg.locator('[data-sched-dt]').fill(DTLOCAL).catch(() => {});
+await pg.waitForTimeout(600);
+const val = await pg.locator('[data-sched-dt]').inputValue().catch(() => '');
+console.log('datetime field value:', JSON.stringify(val), '(want', DTLOCAL + ')');
 await pg.screenshot({ path: '/tmp/onchain.png' });
 
 if (!SUBMIT) { console.log('\nstopped before SCHEDULE EPISODE (pass --submit). Review the form.'); await browser.close(); process.exit(0); }
-if (!set.ok) { console.log('✗ could not set datetime — not clicking.'); await browser.close(); process.exit(2); }
+// HARD GUARD: never trigger the wallet tx unless the datetime actually took.
+if (val !== DTLOCAL) { console.log(`✗ datetime did NOT set (got "${val}", want "${DTLOCAL}") — NOT clicking SCHEDULE EPISODE (no tx).`); await browser.close(); process.exit(3); }
 
 // 3) Click SCHEDULE EPISODE → wallet tx pops up for the USER to sign. We DO NOT sign.
 await pg.getByRole('button', { name: /SCHEDULE EPISODE/i }).first().click({ timeout: 6000 });
