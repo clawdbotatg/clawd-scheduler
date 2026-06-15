@@ -10,9 +10,11 @@
 import { chromium } from 'playwright';
 import { episode } from './lib/config.js';
 
-const ep = episode(process.env.X_HANDLE || process.env.ONCHAIN_HANDLE || 'adrianleb');
-const DATE = process.env.ONCHAIN_DATE || process.env.X_DATE || 'Jun 15, 2026';
-const TIME = process.env.ONCHAIN_TIME || process.env.X_TIME || '9:00 AM';
+const HANDLE_IN = process.env.X_HANDLE || process.env.ONCHAIN_HANDLE;
+const DATE = process.env.ONCHAIN_DATE || process.env.X_DATE;
+const TIME = process.env.ONCHAIN_TIME || process.env.X_TIME;
+if (!HANDLE_IN || !DATE || !TIME) { console.error('set (X_HANDLE|ONCHAIN_HANDLE), (ONCHAIN_DATE|X_DATE), (ONCHAIN_TIME|X_TIME)'); process.exit(1); }
+const ep = episode(HANDLE_IN);
 const PORT = Number(process.env.SLOP_PORT_SOCIAL || 9223);
 const SUBMIT = process.argv.includes('--submit');
 

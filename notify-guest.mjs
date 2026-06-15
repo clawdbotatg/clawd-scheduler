@@ -11,7 +11,9 @@ import { execFileSync } from 'node:child_process';
 import { episode } from './lib/config.js';
 
 const arg = (n) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
-const ep = episode(process.env.NOTIFY_HANDLE || arg('handle') || 'port_dev');
+const HANDLE_IN = process.env.NOTIFY_HANDLE || arg('handle');
+if (!HANDLE_IN) { console.error('set NOTIFY_HANDLE (or --handle <h>)'); process.exit(1); }
+const ep = episode(HANDLE_IN);
 const INVITE = process.env.NOTIFY_INVITE || arg('invite') || '';
 const wantLink = process.argv.includes('--link');
 

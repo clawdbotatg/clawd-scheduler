@@ -1,7 +1,8 @@
 import { connectCDP } from './lib/connect.js';
 import fs from 'node:fs';
 
-const url = process.argv[2] || 'https://live.slop.computer/port-dev?invite=YOUR_INVITE_CODE';
+const url = process.argv[2];
+if (!url) { console.error('usage: node copy-skill.js \'https://live.slop.computer/<slug>?invite=...\''); process.exit(1); }
 const { browser, page } = await connectCDP(9223);
 await page.goto(url, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(5000);

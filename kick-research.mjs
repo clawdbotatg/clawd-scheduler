@@ -1,6 +1,7 @@
 import { TOKEN, BASE } from './lib/config.js';
-const SLUG = process.argv[2] || 'port-dev';
-const TWITTER = process.argv[3] || '@port_dev';
+const SLUG = process.argv[2];
+const TWITTER = process.argv[3];
+if (!SLUG || !TWITTER) { console.error('usage: node kick-research.mjs <slug> <@handle>'); process.exit(1); }
 const H = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
 
 const research = async () => ((await (await fetch(`${BASE}/v1/state?slug=${SLUG}`, { headers: H })).json()).researchState) || {};

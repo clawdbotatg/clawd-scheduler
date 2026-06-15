@@ -7,14 +7,14 @@ import { episode, fetchSocialsDesc, PORTS } from './lib/config.js';
 //     node fill-yt-schedule.js [--submit]
 // Without --submit it fills every field and STOPS before "Done" (review gate).
 const SUBMIT = process.argv.includes('--submit');
-const ep = episode(process.env.YT_HANDLE || 'port_dev');
+const DATE = process.env.YT_DATE, TIME = process.env.YT_TIME;
+if (!process.env.YT_HANDLE || !DATE || !TIME) { console.error('set YT_HANDLE, YT_DATE ("Mon DD, YYYY"), YT_TIME ("H:MM AM")'); process.exit(1); }
+const ep = episode(process.env.YT_HANDLE);
 const HANDLE = ep.handle;
 const SLUG = ep.slug;
 const TITLE = ep.title;
 const THUMB = process.env.YT_THUMB || ep.card;
 const PLAYLIST = process.env.YT_PLAYLIST || 'Slop.Computer';
-const DATE = process.env.YT_DATE || 'Jun 18, 2026';
-const TIME = process.env.YT_TIME || '9:30 AM';
 
 const DESC = await fetchSocialsDesc(SLUG);
 console.log('description:', DESC.slice(0, 60), '…');

@@ -15,13 +15,13 @@
 import { chromium } from 'playwright';
 import { episode } from './lib/config.js';
 
-const ep = episode(process.env.X_HANDLE || 'adrianleb');
+const DATE = process.env.X_DATE, TIME = process.env.X_TIME;  // "Mon DD, YYYY" / "H:MM AM"
+if (!process.env.X_HANDLE || !DATE || !TIME) { console.error('set X_HANDLE, X_DATE ("Mon DD, YYYY"), X_TIME ("H:MM AM")'); process.exit(1); }
+const ep = episode(process.env.X_HANDLE);
 const TITLE = process.env.X_TITLE || ep.title;
 const POSTER = process.env.X_POSTER || ep.card;          // /tmp/<slug>card.png
 const SOURCE = process.env.X_SOURCE || 'Slop.Computer';   // X media-studio source name
 const CATEGORY = process.env.X_CATEGORY || 'Technology';
-const DATE = process.env.X_DATE || 'Jun 15, 2026';        // "Mon DD, YYYY"
-const TIME = process.env.X_TIME || '9:00 AM';
 const DURATION_MIN = Number(process.env.X_DURATION_MIN || 70);
 const PORT = Number(process.env.SLOP_PORT_SOCIAL || 9223);
 const SUBMIT = process.argv.includes('--submit');

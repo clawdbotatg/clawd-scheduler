@@ -4,8 +4,9 @@
 import { chromium } from 'playwright';
 import { episode } from './lib/config.js';
 
-const ep = episode(process.env.CHK_HANDLE || 'port_dev');
-const DATE = process.env.CHK_DATE || 'Jun 18, 2026';
+if (!process.env.CHK_HANDLE || !process.env.CHK_DATE) { console.error('set CHK_HANDLE and CHK_DATE ("Mon DD, YYYY")'); process.exit(1); }
+const ep = episode(process.env.CHK_HANDLE);
+const DATE = process.env.CHK_DATE;
 const monthDay = DATE.replace(/,\s*\d{4}$/, '');             // "Jun 18"
 const dm = DATE.match(/^([A-Za-z]{3})[a-z]*\s+(\d{1,2}),\s+(\d{4})$/);
 const MONTHS = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 };

@@ -1,9 +1,10 @@
 import { connectCDP } from './lib/connect.js';
 import fs from 'node:fs';
 
-const SLUG = process.argv[2] || 'port-dev';
-const OUT = process.argv[3] || '/tmp/portdevcard.png';
-const URL = `https://live.slop.computer/${SLUG}?invite=YOUR_INVITE_CODE`;
+const SLUG = process.argv[2];
+const URL = process.argv[3]; // full room URL incl. ?invite=...
+if (!SLUG || !URL) { console.error('usage: node save-card.js <slug> \'<roomUrl with ?invite=...>\' [outPath]'); process.exit(1); }
+const OUT = process.argv[4] || `/tmp/${SLUG}card.png`;
 
 const { browser, page } = await connectCDP(9223);
 await page.goto(URL, { waitUntil: 'domcontentloaded' });
