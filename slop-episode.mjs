@@ -14,14 +14,15 @@
 //   --create-room      create the room if find-room reports none (WRITE)
 //   --pfp-ok           proceed past the "is this the right face?" check to card
 //   --save-calendar    actually save the calendar edit (silent, never emails)
-//   --submit-youtube   click Done to schedule the broadcast (else stops for review)
+//   --submit-youtube   click Done to schedule the YouTube broadcast (else stops for review)
+//   --submit-twitter   create the X/Twitter livestream (else stops for review)
 //
 // Scope flags:  --from <phase>   start at a phase (skip earlier)
 //               --only <phase>   run just one phase
-//   phases: room research pfp card publish calendar youtube
+//   phases: room research pfp card publish calendar youtube twitter
 //
 // Per-episode inputs:  --handle (req) --token <roomToken> --date --time
-//                      --invite <roomUrl> --match
+//                      --duration <min> (X broadcast length, default 70) --invite <roomUrl> --match
 // The relay token is PER-ROOM (not global). Get it from the room's invite link:
 //   node copy-skill.js '<inviteUrl>'   → prints .../v1/skill?token=<ROOM_TOKEN>&slug=…
 // Pass that 64-hex token as --token (used for research/card/publish/description).
@@ -42,6 +43,7 @@ const TOK = opt('token', TOKEN);                    // PER-ROOM token (see copy-
 const tokenSource = opt('token') ? '--token' : (TOK ? '.env/SLOP_TOKEN' : 'NONE');
 const DATE = opt('date', 'Jun 18, 2026');
 const TIME = opt('time', '9:30 AM');
+const DURATION = opt('duration', '70');             // X broadcast length in minutes
 const INVITE = opt('invite');                       // room share link (for calendar)
 const MATCH = opt('match', ep.handle.replace(/[_-]/g, ' ')); // calendar title match
 const FROM = opt('from');
@@ -70,6 +72,10 @@ const phases = [
     cmd: [`fill-yt-schedule.js`, ...(flag('submit-youtube') ? ['--submit'] : [])],
     env: { YT_HANDLE: ep.handle, YT_DATE: DATE, YT_TIME: TIME },
     gate: { flag: 'submit-youtube', when: 'without it the wizard is filled but STOPS before Done (review)' } },
+  { name: 'twitter', desc: `schedule the X/Twitter livestream (${DATE} ${TIME}, ${DURATION}min)`,
+    cmd: [`x-schedule.mjs`, ...(flag('submit-twitter') ? ['--submit'] : [])],
+    env: { X_HANDLE: ep.handle, X_DATE: DATE, X_TIME: TIME, X_DURATION_MIN: String(DURATION) },
+    gate: { flag: 'submit-twitter', when: 'without it the form is filled but STOPS before create (review). NB: on X, Cancel/Escape DELETES — x-schedule finishes by navigating away.' } },
 ];
 
 let list = phases;

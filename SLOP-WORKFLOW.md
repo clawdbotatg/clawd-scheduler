@@ -30,15 +30,18 @@ node slop-episode.mjs --handle <x> --token <ROOM_TOKEN> --date 'Jun 18, 2026' \
 
 # 2) execute, passing each gate explicitly as you review:
 node slop-episode.mjs --handle <x> --token <ROOM_TOKEN> --date '..' --time '..' \
-    --invite '..' --go [--create-room] [--pfp-ok] [--save-calendar] [--submit-youtube]
+    --invite '..' --go [--create-room] [--pfp-ok] [--save-calendar] \
+    [--submit-youtube] [--submit-twitter]
 ```
 
 Gates (each opts past ONE human checkpoint): `--create-room` (room missing →
 create, WRITE), `--pfp-ok` (verified it's the right face → bake card),
 `--save-calendar` (else dry-run, never emails the guest), `--submit-youtube`
-(else fills wizard and STOPS before Done). Scope: `--from <phase>` / `--only
-<phase>` (phases: room research pfp card publish calendar youtube). On any
-failure it prints the exact `--from <phase> --go` resume command.
+(else fills the YouTube wizard and STOPS before Done), `--submit-twitter` (else
+fills the X form and STOPS before create). Scope: `--from <phase>` / `--only
+<phase>` (phases: room research pfp card publish calendar youtube twitter).
+`--duration <min>` sets the X broadcast length (default 70). On any failure it
+prints the exact `--from <phase> --go` resume command.
 
 **The relay token is PER-ROOM and a SECRET** — never hardcoded or committed. Get
 it from the room's invite link via `copy-skill.js` (step 0b) and pass it as
@@ -286,6 +289,35 @@ filtered by text. **Critical:** the *playlist* popup from the previous step
 stays open and swallows the category click — press **Escape first** to dismiss
 it. (Recon: `recon-category.js`.)
 
+## Detail — step 13: schedule the X/Twitter livestream  ✅
+`x-schedule.mjs` drives **X Media Studio → Producer → Create broadcast** on the
+**9223 clone** (Chrome with the user's X login). Env inputs:
+`X_HANDLE X_DATE X_TIME X_DURATION_MIN` (default 70); `--submit` to actually
+create. Fields, in order:
+- broadcast name = `episode(handle).title` (same as YouTube)
+- category = **Technology** (typeahead `Add Category`; keyboard fallback)
+- source = **Slop.Computer** — set via the underlying native `<select>`
+  (`selectOption({label})`); the visible "Select a source" button is just a skin
+- audience = Public (default), chat = Verified accounts (default)
+- schedule = **Start later** → Starts/Ends. Each datetime field is a `<button>`
+  that opens a calendar popup — **you cannot type raw text into it**; pick the
+  day via `.Calendar-day.is-selectable` (best-effort month/year via the picker's
+  `<select>`s first), but the **time** sub-field IS a typeable `input.TimePicker`
+  (fill `'9:00 AM'`). End = start + duration (computed).
+- poster image = `/tmp/<slug>card.png` via the hidden `input[type=file]`
+
+### ☠️ THE BIG X GOTCHA (cost us a deletion)
+Clicking **Create broadcast** *immediately creates and persists* the broadcast.
+The panel that opens afterward is for OPTIONAL extra settings, and its
+**Cancel / Escape DELETES the broadcast** ("Broadcast deleted" toast). To finish,
+**navigate away** (reload `/producer`) — never Cancel/Escape. `x-schedule.mjs`
+does this and confirms the row survived the reload. (Save is only enabled if you
+actually changed something post-create.)
+
+Note: tested **headed** (the user wanted to watch). For unattended runs launch
+9223 **headless** (`launch-clone.sh <profile> 9223 headless chrome`) — the UA
+spoof should satisfy X Studio like it does YouTube, but verify.
+
 ## Running WITHOUT stealing focus  ✅
 `launch-clone.sh <profile> <port> [headed|headless]`:
 - **headless** (default for prod runs): `--headless=new` — no window exists, so
@@ -299,5 +331,18 @@ it. (Recon: `recon-category.js`.)
   never drive after launch. For unattended driving, **use headless.**
 
 Watch a headless run live: every `step()` writes `/tmp/slop-live.png`; serve
-`/tmp` (`python3 -m http.server 8899 --directory /tmp`) and open
-`http://localhost:8899/slop-watch.html` (auto-refreshing screenshot viewer).
+`/tmp` **bound to loopback only** and open
+`http://localhost:8899/slop-watch.html` (auto-refreshing screenshot viewer):
+
+```bash
+python3 -m http.server 8899 --bind 127.0.0.1 --directory /tmp >/tmp/slop-httpd.log 2>&1 &
+echo $! >/tmp/slop-httpd.pid          # remember the PID so you can stop it
+```
+
+⚠️ **Never omit `--bind 127.0.0.1`.** Python's `http.server` defaults to
+`0.0.0.0`, which would expose all of `/tmp` (a shared scratch dir where other
+tools drop tokens/keys) to **everyone on the LAN**, unauthenticated. Loopback
+keeps it local.
+
+**Tear it down when the run ends** — it does not stop itself:
+`kill "$(cat /tmp/slop-httpd.pid)" 2>/dev/null` (or `pkill -f 'http.server 8899'`).
