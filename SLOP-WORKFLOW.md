@@ -38,10 +38,21 @@ Gates (each opts past ONE human checkpoint): `--create-room` (room missing →
 create, WRITE), `--pfp-ok` (verified it's the right face → bake card),
 `--save-calendar` (else dry-run, never emails the guest), `--submit-youtube`
 (else fills the YouTube wizard and STOPS before Done), `--submit-twitter` (else
-fills the X form and STOPS before create). Scope: `--from <phase>` / `--only
-<phase>` (phases: room research pfp card publish calendar youtube twitter).
-`--duration <min>` sets the X broadcast length (default 70). On any failure it
-prints the exact `--from <phase> --go` resume command.
+fills the X form and STOPS before create), `--submit-onchain` (else fills the
+slop.computer schedule form and STOPS; WITH it, clicks SCHEDULE EPISODE → **a
+wallet tx pops up for YOU to sign** — the script never signs). Scope: `--from
+<phase>` / `--only <phase>` (phases: room research pfp card publish calendar
+youtube twitter onchain). `--duration <min>` sets the X broadcast length
+(default 70). On any failure it prints the exact `--from <phase> --go` resume.
+
+**Every scheduling phase is IDEMPOTENT** — it checks whether the episode is
+already booked on that surface and SKIPS if so, so re-running "the full stack for
+adrianleb" never double-books. The checks: calendar event already shows the real
+`live.slop.computer/<slug>` link · YouTube Upcoming has `@handle` on that date ·
+X Producer scheduled list has `@handle` on that date · slop.computer/ lists the
+slug. This makes discovery-driven runs safe: find the episode(s) for a day from
+the calendar (`node workflows/find-next-slop.js`) and run the orchestrator per
+guest @handle — already-done surfaces skip, not-yet-started ones get created.
 
 **The relay token is PER-ROOM and a SECRET** — never hardcoded or committed. Get
 it from the room's invite link via `copy-skill.js` (step 0b) and pass it as
@@ -133,10 +144,20 @@ Read-only unless marked **WRITE** (those have a confirm/ask gate). `<slug>` and
       — Google Calendar enforces Trusted Types, so `insertHTML` is blocked.
     - Done for port: title prefixed, location = real invite, description set, no email.
 
-12. **Schedule the YouTube + Twitter livestreams**  ·  WRITE  ·  ⏳ TODO
-    - do: schedule the broadcasts using `/tmp/<slug>card.png` (thumbnail/unfurl) +
-      the dossier, at the episode time.
-    - result: broadcasts scheduled.
+12. **Schedule the YouTube broadcast**  ·  WRITE  ·  ✅  (idempotent)
+    - `YT_HANDLE=.. YT_DATE=.. YT_TIME=.. node fill-yt-schedule.js [--submit]`
+    - skips if `@handle` is already in the YouTube Upcoming list on that date.
+
+13. **Schedule the X/Twitter livestream**  ·  WRITE  ·  ✅  (idempotent)
+    - `X_HANDLE=.. X_DATE=.. X_TIME=.. X_DURATION_MIN=70 node x-schedule.mjs [--submit]`
+    - skips if `@handle` is already in the X Producer scheduled list on that date.
+
+14. **Register the episode on-chain**  ·  WRITE  ·  ✅  ·  **YOU sign the tx**  ·  LAST
+    - `X_HANDLE=.. ONCHAIN_DATE=.. ONCHAIN_TIME=.. node schedule-onchain.mjs [--submit]`
+    - skips if the slug already shows on `slop.computer/`. Else fills the SCHEDULE
+      form's datetime and (with `--submit`) clicks **SCHEDULE EPISODE** → a wallet
+      transaction pops up that **the user signs** (the script never signs / never
+      touches the wallet password).
 
 Below: per-phase detail + the hard-won gotchas (auth, avatar selector, slug rule,
 confidence threshold). The numbered list above is the canonical order.
@@ -317,6 +338,20 @@ actually changed something post-create.)
 Note: tested **headed** (the user wanted to watch). For unattended runs launch
 9223 **headless** (`launch-clone.sh <profile> 9223 headless chrome`) — the UA
 spoof should satisfy X Studio like it does YouTube, but verify.
+
+## Detail — step 14: register on-chain (slop.computer)  ✅  · LAST · user signs
+`schedule-onchain.mjs` runs on the **9223 clone** (Chrome with **austingriffith.eth
+wallet connected**). Env: `X_HANDLE ONCHAIN_DATE ONCHAIN_TIME`; `--submit` to act.
+1. **Idempotency:** load `slop.computer/` — if the slug already appears (scheduled
+   episodes are listed there, e.g. "ADRIANLEB · GOING LIVE MON, JUN 15, 9:00 AM
+   MT"), **SKIP** (no duplicate, no tx).
+2. Else open `slop.computer/admin?liveSlugToSchedule=<slug>` (the `[schedule]`
+   link from `live.slop.computer/admin` points here). The **SCHEDULE** section is
+   pre-filled with the slug + a `datetime-local` input. Set it to the episode time
+   (`"Jun 15, 2026"`+`"9:00 AM"` → `2026-06-15T09:00`) via the native value setter.
+3. With `--submit`: click **SCHEDULE EPISODE** → **a wallet transaction pops up that
+   the USER signs** in their browser. The script STOPS there — it never signs, never
+   enters a wallet password. After signing, the episode appears on `slop.computer/`.
 
 ## Running WITHOUT stealing focus  ✅
 `launch-clone.sh <profile> <port> [headed|headless]`:

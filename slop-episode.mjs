@@ -16,10 +16,15 @@
 //   --save-calendar    actually save the calendar edit (silent, never emails)
 //   --submit-youtube   click Done to schedule the YouTube broadcast (else stops for review)
 //   --submit-twitter   create the X/Twitter livestream (else stops for review)
+//   --submit-onchain   click SCHEDULE EPISODE → YOU sign the wallet tx (else stops for review)
+//
+// Every scheduling phase is IDEMPOTENT: it checks whether this episode is already
+// scheduled on that surface (calendar link / YouTube Upcoming / X Producer /
+// slop.computer) and SKIPS if so — safe to re-run, never double-books.
 //
 // Scope flags:  --from <phase>   start at a phase (skip earlier)
 //               --only <phase>   run just one phase
-//   phases: room research pfp card publish calendar youtube twitter
+//   phases: room research pfp card publish calendar youtube twitter onchain
 //
 // Per-episode inputs:  --handle (req) --token <roomToken> --date --time
 //                      --duration <min> (X broadcast length, default 70) --invite <roomUrl> --match
@@ -76,6 +81,10 @@ const phases = [
     cmd: [`x-schedule.mjs`, ...(flag('submit-twitter') ? ['--submit'] : [])],
     env: { X_HANDLE: ep.handle, X_DATE: DATE, X_TIME: TIME, X_DURATION_MIN: String(DURATION) },
     gate: { flag: 'submit-twitter', when: 'without it the form is filled but STOPS before create (review). NB: on X, Cancel/Escape DELETES — x-schedule finishes by navigating away.' } },
+  { name: 'onchain', desc: `register the episode on-chain via slop.computer (${DATE} ${TIME}) — LAST; YOU sign the wallet tx`,
+    cmd: [`schedule-onchain.mjs`, ...(flag('submit-onchain') ? ['--submit'] : [])],
+    env: { X_HANDLE: ep.handle, ONCHAIN_DATE: DATE, ONCHAIN_TIME: TIME },
+    gate: { flag: 'submit-onchain', when: 'skips if already on slop.computer; otherwise fills the form, and WITH the gate clicks SCHEDULE EPISODE → a wallet tx pops up for YOU to sign (the script never signs).' } },
 ];
 
 let list = phases;

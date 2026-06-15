@@ -53,6 +53,19 @@ try {
     await page.waitForTimeout(400);
   }
   if (!opened) throw new Error(`no event matching "${MATCH}" on ${DAY}`);
+
+  // IDEMPOTENCY: if the event already shows the real room link (not TODO), it's
+  // already been updated — skip (safe to re-run, no duplicate edits/emails).
+  {
+    const dlg = (await page.locator('[role="dialog"]').first().innerText().catch(() => '')) || '';
+    const linkCore = (LINK.match(/live\.slop\.computer\/[a-z0-9-]+/i) || [])[0];
+    if (linkCore && dlg.includes(linkCore)) {
+      console.log(`✓ Calendar: event "${MATCH}" already has ${linkCore} — SKIP (already updated).`);
+      await browser.close();
+      process.exit(0);
+    }
+  }
+
   await page.getByRole('button', { name: /edit event/i }).first().click({ timeout: 8000 });
   await page.waitForTimeout(3500);
 

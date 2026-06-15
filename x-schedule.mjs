@@ -42,10 +42,22 @@ console.log(`X broadcast: ${TITLE}\n  ${MON} ${DAY}, ${YEAR}  ${TIME}–${END_TI
 
 const browser = await chromium.connectOverCDP(`http://127.0.0.1:${PORT}`);
 const ctx = browser.contexts()[0];
-let pg = ctx.pages().find((p) => /studio\.x\.com\/producer/.test(p.url()));
-if (!pg) { pg = ctx.pages()[0] || (await ctx.newPage()); await pg.goto('https://studio.x.com/producer', { waitUntil: 'domcontentloaded' }); await pg.waitForTimeout(6000); }
+let pg = ctx.pages().find((p) => /studio\.x\.com/.test(p.url())) || ctx.pages()[0] || (await ctx.newPage());
+await pg.goto('https://studio.x.com/producer', { waitUntil: 'domcontentloaded' });
+await pg.waitForTimeout(6000);
 await pg.bringToFront();
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+// IDEMPOTENCY: skip if this episode is already in the scheduled list (same @handle + date).
+{
+  const list = (await pg.locator('body').innerText().catch(() => '')) || '';
+  const monthDay = DATE.replace(/,\s*\d{4}$/, ''); // "Jun 15, 2026" -> "Jun 15"
+  if (new RegExp(`@${ep.handle}\\b`, 'i').test(list) && list.includes(monthDay)) {
+    console.log(`✓ X/Twitter: "@${ep.handle}" broadcast already scheduled on ${monthDay} — SKIP (no duplicate).`);
+    await browser.close();
+    process.exit(0);
+  }
+}
 
 // open a fresh Create broadcast form
 await pg.getByText('Create broadcast', { exact: true }).first().click({ timeout: 8000 });

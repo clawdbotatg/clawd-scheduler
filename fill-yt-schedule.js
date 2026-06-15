@@ -29,6 +29,18 @@ const step = async (label, fn) => {
 
 await page.goto('https://studio.youtube.com/channel/UC/livestreaming', { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(4500);
+
+// IDEMPOTENCY: skip if this episode is already in the Upcoming list (same @handle + date).
+{
+  const list = (await page.locator('body').innerText().catch(() => '')) || '';
+  const monthDay = DATE.replace(/,\s*\d{4}$/, ''); // "Jun 15, 2026" -> "Jun 15"
+  if (new RegExp(`@${HANDLE}\\b`, 'i').test(list) && list.includes(monthDay)) {
+    console.log(`✓ YouTube: "@${HANDLE}" broadcast already scheduled on ${monthDay} — SKIP (no duplicate).`);
+    await browser.close();
+    process.exit(0);
+  }
+}
+
 await page.getByText('Schedule Stream', { exact: false }).first().click({ timeout: 12000 });
 await page.waitForTimeout(3000);
 await page.getByRole('button', { name: /create new/i }).click({ timeout: 12000 });
