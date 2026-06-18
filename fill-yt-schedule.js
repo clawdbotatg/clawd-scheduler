@@ -207,7 +207,9 @@ if (SUBMIT) {
     await page.goto('https://studio.youtube.com/channel/UC/livestreaming', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(7000);
     const t = (await page.locator('body').innerText().catch(() => '')) || '';
-    const ok = new RegExp(TITLE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').slice(0, 30)).test(t) || t.includes(HANDLE);
+    // slice FIRST, then escape — escaping then slicing can cut a backslash
+    // escape in half (e.g. a trailing-underscore handle), yielding an invalid regex.
+    const ok = new RegExp(TITLE.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(t) || t.includes(HANDLE);
     if (!ok) throw new Error('scheduled stream not found in Upcoming list');
     console.log('  ✓ found in Upcoming:', DATE);
   });

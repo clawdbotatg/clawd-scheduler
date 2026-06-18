@@ -29,12 +29,17 @@ await sp.goto('https://studio.x.com/producer', { waitUntil: 'domcontentloaded' }
 await sp.goto(`https://calendar.google.com/calendar/u/0/r/day/${dayUrl}`, { waitUntil: 'domcontentloaded' }); await sp.waitForTimeout(3000);
 {
   const ids = await sp.evaluate(() => [...new Set([...document.querySelectorAll('[data-eventid]')].map((e) => e.getAttribute('data-eventid')))]);
-  const matchStr = ep.handle.replace(/[_-]/g, ' ');
+  // Identify THIS episode's event by the room link itself (the slug). The old
+  // approach matched a handle-with-spaces ("sodofi ") against the dialog text,
+  // but the saved link reads "…/sodofi?invite=…" — so a trailing-underscore
+  // handle never matched and calendar false-negatived. The slug-in-link is both
+  // the unique identifier AND exactly what we're verifying, so collapse the two.
+  const linkRe = new RegExp(`live\\.slop\\.computer/${ep.slug}\\b`, 'i');
   for (const id of ids) {
     await sp.locator(`[data-eventid="${id}"]`).first().click({ timeout: 5000 }).catch(() => {});
     await sp.waitForTimeout(1000);
     const t = (await sp.locator('[role="dialog"]').first().innerText().catch(() => '')) || '';
-    if (t.toLowerCase().includes(matchStr.toLowerCase())) { r.calendar = new RegExp(`live\\.slop\\.computer/${ep.slug}`, 'i').test(t); break; }
+    if (linkRe.test(t)) { r.calendar = true; break; }
     await sp.keyboard.press('Escape'); await sp.waitForTimeout(300);
   }
   await sp.keyboard.press('Escape').catch(() => {});
