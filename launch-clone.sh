@@ -21,9 +21,17 @@ if [ "$MODE" = "headless" ]; then
     --user-data-dir="$PROFILE" --remote-debugging-port="$PORT" \
     --no-first-run --no-default-browser-check >"/tmp/clone-$PORT.log" 2>&1 &
 else
-  # -n = new instance, -g = stay in background (no focus steal)
-  open -n -g -a "$APP" --args --user-data-dir="$PROFILE" --remote-debugging-port="$PORT" \
-    --no-first-run --no-default-browser-check --hide-crash-restore-bubble about:blank
+  # Headed = a REAL visible window (this is where the user signs wallet popups).
+  # Launch the binary DIRECTLY, NOT via `open -g`: an `open`-launched Chrome exposes
+  # a CDP browser endpoint that rejects Playwright context management
+  # (Browser.setDownloadBehavior -> "Browser context management is not supported"),
+  # which breaks chromium.connectOverCDP() in schedule-onchain.mjs. A direct-binary
+  # launch gives a clean endpoint Playwright can drive. UA spoof kept for parity.
+  UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+  nohup "$BIN" --user-agent="$UA" --window-size=1366,900 \
+    --user-data-dir="$PROFILE" --remote-debugging-port="$PORT" \
+    --no-first-run --no-default-browser-check --hide-crash-restore-bubble about:blank \
+    >"/tmp/clone-$PORT.log" 2>&1 &
 fi
 
 for i in $(seq 1 40); do
