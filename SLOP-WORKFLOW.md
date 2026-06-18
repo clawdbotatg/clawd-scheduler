@@ -97,8 +97,8 @@ Read-only unless marked **WRITE** (those have a confirm/ask gate). `<slug>` and
    - result: a slug → *port-dev*
    - `lib/slugify.js` (used by steps 5)
 
-5. **Find or create the room**  ·  WRITE (create is gated)
-   - do: open admin, look for `/<slug>`; if missing, ASK Austin, then create.
+5. **Find or create the room**  ·  WRITE (create is NOT gated — just do it)
+   - do: open admin, look for `/<slug>`; if missing, create it (no cost, no ask).
    - result: room exists → *live.slop.computer/port-dev*
    - `node find-room.js <handle>` → if missing → `node create-room.js <handle>`
 
@@ -237,7 +237,7 @@ dev-portal **company** — the decoy that outranks the person on a generic searc
 
 ## Detail — step 5: find or create the live.slop.computer room  ✅ built
 `node find-room.js <handle>`   (read-only check)
-`node create-room.js <handle-or-slug>`   (WRITE — only after Austin confirms)
+`node create-room.js <handle-or-slug>`   (WRITE — auto-create if missing, no ask; no cost)
 - **Slug = slugified handle.** `lib/slugify.js` maps `@port_dev` → `port-dev`
   (underscore→hyphen, `[a-z0-9-]`, no leading/trailing hyphen, ≤64).
 - **Why not allow underscores?** The mainnet contract `SlopComputer.sol`

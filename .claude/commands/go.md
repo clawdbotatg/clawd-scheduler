@@ -11,3 +11,9 @@ Always run from `~/clawd/clawd-scheduler` (the live working copy with `profiles/
 `data/`, `.env`), NOT the harness clone. Stay headless for every phase except the
 on-chain signing step (the user must see + sign the wallet popup), then revert to
 headless immediately. Idempotent — re-running never double-books.
+
+Room creation is NOT a gate: if the room doesn't exist yet, just create it
+(`create-room.js`) and continue — there's no cost and no confirmation needed.
+The only things that still pause for the user: (1) an ambiguous guest handle
+(auto-accept when confident, score ≥ 5), (2) the on-chain wallet signature,
+(3) the final Telegram notify (prep to clipboard; the user sends it).
