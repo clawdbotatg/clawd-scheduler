@@ -9,7 +9,7 @@
 //     node notify-guest.mjs [--link]
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-import { episode } from './lib/config.js';
+import { episode, GUEST_BLURB, guestMessage } from './lib/config.js';
 
 const arg = (n) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const HANDLE_IN = process.env.NOTIFY_HANDLE || arg('handle');
@@ -18,8 +18,8 @@ const ep = episode(HANDLE_IN);
 const INVITE = process.env.NOTIFY_INVITE || arg('invite') || '';
 const wantLink = process.argv.includes('--link');
 
-// The blurb is ONE line on purpose (Telegram soft-wraps it). Keep it verbatim.
-const BLURB = "updated the cal invite with the link to slop.computer, you will jump in and share your camera — it's a weird live interactive site, not zoom or google meets or anything — you share your video, there is a green room before we start, and then we will go live — you can get in and test any time, there is a computer room built just for you — welcome to the sloppiest of slop computers :)";
+// Blurb + full message live in lib/config.js (shared with build-invites-page.mjs).
+const BLURB = GUEST_BLURB;
 
 const copy = (s) => { try { execFileSync('pbcopy', [], { input: s }); return true; } catch { return false; } };
 
@@ -29,7 +29,7 @@ console.log('LINK:\n' + (INVITE || '(no invite link — pass NOTIFY_INVITE / --i
 
 // Default clipboard = the full message ready for ONE paste: blurb (single line)
 // + blank line + invite link. Only the newlines before the link are real.
-const FULL = INVITE ? `${BLURB}\n\n${INVITE}` : BLURB;
+const FULL = guestMessage(INVITE);
 // Also drop it to a file — the clipboard is easily clobbered before you paste;
 // `pbcopy < <file>` re-copies it without re-running the whole step.
 const NOTIFY_FILE = `/tmp/${ep.slug}-notify.txt`;

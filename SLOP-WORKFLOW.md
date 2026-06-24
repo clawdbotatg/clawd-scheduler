@@ -172,12 +172,23 @@ Read-only unless marked **WRITE** (those have a confirm/ask gate). `<slug>` and
       SCHEDULE EPISODE unless it equals the target (e.g. `2026-06-18T09:30`) — so it
       can never fire a tx with an empty/wrong time (it did once; now guarded).
 
-15. **Notify the guest on Telegram**  ·  manual send  ·  ✅  ·  LAST
+15. **Notify the guest on Telegram**  ·  manual send  ·  ✅
     - `NOTIFY_HANDLE=.. NOTIFY_INVITE=<roomLink> node notify-guest.mjs [--link]`
     - copies the welcome blurb + room invite to the clipboard as ONE paste (blurb
       is a single line so Telegram soft-wraps it; the only newlines are before the
       link). **The user pastes & sends it** — never auto-sent (a private invite to a
-      guessed Telegram contact is a misidentification risk).
+      guessed Telegram contact is a misidentification risk). The blurb itself lives
+      in `lib/config.js` (`GUEST_BLURB` / `guestMessage`) — shared with step 16.
+
+16. **Build the invites dashboard**  ·  manual send  ·  ✅  ·  LAST (per batch)
+    - `node build-invites-page.mjs [--no-open] [--out <path>]`
+    - When several episodes are scheduled together, this is the nicer finale: it
+      scans the calendar for every upcoming episode with a real room link and writes
+      a little HTML page (`/tmp/slop-invites.html`) — one card per episode, ordered
+      by call time, each with a **Copy message + link** and **Copy link only** button
+      — then opens it on screen. The user copies & sends each as the call comes up.
+      Reads current calendar times (so it reflects any reschedules) and labels guests
+      from the `data/` cache. Same never-auto-send rule as step 15.
 
 Below: per-phase detail + the hard-won gotchas (auth, avatar selector, slug rule,
 confidence threshold). The numbered list above is the canonical order.
