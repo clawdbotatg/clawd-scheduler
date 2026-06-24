@@ -2,6 +2,16 @@
 
 Automates setting up the next slop.computer podcast episode from the calendar.
 Runs against the logged-in profile clones (see `~/.claude/skills/browser-automation`).
+
+> **🛑 HARD RULE — stop and ask on ANY problem. NEVER schedule without a card.**
+> If you can't confidently resolve the guest's X handle, can't download their pfp, the
+> card/thumbnail/poster fails to generate or upload, or any phase errors — **STOP and ask
+> Austin. Do not push through.** A failed thumbnail/poster upload is a HARD STOP, not a
+> warning to continue past. Before any broadcast submit, the episode card MUST be present
+> and uploaded; if `/tmp/<slug>card.png` is missing, regenerate it with `publish-card.mjs`
+> FIRST, then schedule. (Learned the hard way: a YouTube broadcast once got scheduled with
+> the thumbnail upload failing — never again.)
+
 Two browsers in play:
 - **9223** — Chrome clone, `ethereum.org` Google login (calendar) **and** the user's
   X/Twitter session (the profile clone carried BOTH — that's how we read X as the user).
@@ -367,6 +377,49 @@ the CDP session and disrupt signing).
 3. With `--submit`: click **SCHEDULE EPISODE** → **a wallet transaction pops up that
    the USER signs** in their browser. The script STOPS there — it never signs, never
    enters a wallet password. After signing, the episode appears on `slop.computer/`.
+
+## Rescheduling a MOVED episode (Calendly)  ✅
+Guests reschedule via the Calendly links in the event, so an episode that's already
+been scheduled can **move** (date and/or time). The CREATE scripts can't fix this —
+`fill-yt-schedule.js` / `x-schedule.mjs` are idempotent and **SKIP** when the
+`@handle` is already scheduled, so they'll never move the existing broadcast. Use
+the dedicated reschedule scripts, which **edit the existing broadcast in place**:
+
+1. **Re-read the calendar first** — never trust a stale time. `node
+   workflows/find-next-slop.js` lists every upcoming episode's *current* date/time.
+   (This is the bug that bit us: an episode was scheduled off a stale scan, then the
+   guest moved it — always confirm the live calendar time right before scheduling.)
+2. **YouTube:** `YT_HANDLE=0xzak YT_DATE='Jun 26, 2026' YT_TIME='10:30 AM' node
+   reschedule-youtube.mjs [--submit] [--set-thumb]`. Finds the broadcast by `@handle`
+   in the Upcoming list → opens `/video/<id>/edit` → sets date+time (same controls as
+   the create wizard) → Save. `--set-thumb` (re)uploads the episode card (use this to
+   fix a broadcast that got scheduled without its card). Without `--submit` it's a dry
+   run (fills + reads back + guards, no Save).
+3. **X/Twitter:** `X_HANDLE=0xzak X_DATE='Jun 26, 2026' X_TIME='10:30 AM'
+   X_DURATION_MIN=60 node reschedule-x.mjs [--submit]`. Finds the broadcast by
+   `@handle` → opens `/producer/broadcasts/<id>` → sets start, then end → Save.
+4. **On-chain:** the on-chain step is fine to (re)run — `schedule-onchain.mjs` is
+   idempotent (skips if the slug already shows on `slop.computer/`). If the wrong
+   time was already filled but NOT signed, just relaunch the clone (an unsigned wallet
+   tx is abandoned, no on-chain effect) and re-run with the correct time.
+
+### ☠️ X reschedule gotchas (baked into `reschedule-x.mjs`)
+- **The END datetime is locked to the START's day** — the end calendar only offers
+  the start's day, so you MUST move the **start first**, then the end.
+- After editing a datetime field a picker popup stays open and X flashes a transient
+  **"End time must be after start time"**; you must **close the popup** (the script
+  clicks a neutral heading) so validation re-runs before Save.
+- **NEVER Cancel / press Escape** on an X broadcast form — it DELETES the broadcast
+  (same trap as the post-create panel). The script only ever clicks **Save**, and
+  **bails without saving** (no Cancel) on any datetime mismatch — the guard is the
+  safety net.
+
+### YouTube reschedule notes (baked into `reschedule-youtube.mjs`)
+- The existing broadcast's `/video/<id>/edit` page exposes the SAME schedule
+  date/time controls and the SAME `ytcp-thumbnails-compact-editor` as the create
+  wizard, so the create-flow setters are reused. Save button is `#save`. Editing the
+  thumbnail there does NOT disturb the schedule — that's how a card-less broadcast
+  gets its card retro-fitted (`--set-thumb`).
 
 ## Running WITHOUT stealing focus  ✅
 `launch-clone.sh <profile> <port> [headed|headless]`:
