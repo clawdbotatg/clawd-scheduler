@@ -70,6 +70,12 @@ can run the whole thing and it only creates what's missing.
   + room invite to the clipboard; the USER pastes & sends. NEVER auto-send a private
   link to a guessed Telegram contact (handles ≠ Twitter; misID risk).
 - **Calendar edits save SILENTLY.** Always click "Don't send" — never email the guest.
+- **Scripts tear down their tabs.** CDP `browser.close()` only disconnects — a
+  navigated tab lingers in the clone forever (a parked room tab makes the user a
+  ghost "participant"). `lib/connect.js` auto-closes the page it opened on
+  `browser.close()`; pass `{ keepPage: true }` ONLY for tabs that must outlive the
+  script (review gates, the pending wallet-signature tab). Never drive `pages()[0]`
+  — it might BE the signing tab.
 - **Never serve `/tmp` (or any shared dir) on `0.0.0.0`.** Local servers bind
   `127.0.0.1`, write a PID file, and tear down. (Exposed `/tmp` tokens on the LAN once.)
 - **Secrets never get committed.** `.env`, `profiles/` (live cookies), `data/` (guest

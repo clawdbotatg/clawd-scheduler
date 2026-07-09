@@ -17,10 +17,14 @@ const THUMB = process.env.YT_THUMB || ep.card;
 const PLAYLIST = process.env.YT_PLAYLIST || 'Slop.Computer';
 
 const DESC = await fetchSocialsDesc(SLUG);
+// Empty desc = wrong/missing SLOP_TOKEN for THIS room (per-room token) — refuse
+// rather than schedule a blank-description broadcast (happened 2026-07-09).
+if (!DESC.trim()) { console.error('✗ empty description from fetchSocialsDesc — is SLOP_TOKEN the right per-room token?'); process.exit(1); }
 console.log('description:', DESC.slice(0, 60), '…');
 console.log(`episode: ${TITLE}\n  date=${DATE} time=${TIME} thumb=${THUMB} submit=${SUBMIT}`);
 
-const { browser, page } = await connectCDP(PORTS.youtube);
+// keepPage on the review path: without --submit the wizard is left open on purpose.
+const { browser, page } = await connectCDP(PORTS.youtube, { keepPage: !SUBMIT });
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const step = async (label, fn) => {
   try { await fn(); console.log('✓', label); } catch (e) { console.log('✗', label, '—', e.message.split('\n')[0]); }

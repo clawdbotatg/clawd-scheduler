@@ -41,6 +41,7 @@ const already = new RegExp(ep.slug.replace(/-/g, '[- ]?'), 'i').test(home);
 if (already) {
   console.log(`✓ ${ep.slug} ALREADY scheduled on slop.computer — SKIP (no duplicate).`);
   await pg.screenshot({ path: '/tmp/onchain.png' });
+  await pg.close().catch(() => {});
   await browser.close();
   process.exit(0);
 }
@@ -58,20 +59,24 @@ const marked = await pg.evaluate(() => {
   for (let i = 0; i < 6 && s; i++) { const dtl = s.querySelector?.('input[type="datetime-local"]'); if (dtl) { dtl.setAttribute('data-sched-dt', '1'); return true; } s = s.parentElement; }
   return false;
 });
-if (!marked) { console.log('✗ no datetime-local in the SCHEDULE section.'); await browser.close(); process.exit(2); }
+if (!marked) { console.log('✗ no datetime-local in the SCHEDULE section.'); await pg.close().catch(() => {}); await browser.close(); process.exit(2); }
 await pg.locator('[data-sched-dt]').fill(DTLOCAL).catch(() => {});
 await pg.waitForTimeout(600);
 const val = await pg.locator('[data-sched-dt]').inputValue().catch(() => '');
 console.log('datetime field value:', JSON.stringify(val), '(want', DTLOCAL + ')');
 await pg.screenshot({ path: '/tmp/onchain.png' });
 
+// Review gate: tab is left open ON PURPOSE so the filled form can be inspected.
 if (!SUBMIT) { console.log('\nstopped before SCHEDULE EPISODE (pass --submit). Review the form.'); await browser.close(); process.exit(0); }
 // HARD GUARD: never trigger the wallet tx unless the datetime actually took.
-if (val !== DTLOCAL) { console.log(`✗ datetime did NOT set (got "${val}", want "${DTLOCAL}") — NOT clicking SCHEDULE EPISODE (no tx).`); await browser.close(); process.exit(3); }
+if (val !== DTLOCAL) { console.log(`✗ datetime did NOT set (got "${val}", want "${DTLOCAL}") — NOT clicking SCHEDULE EPISODE (no tx).`); await pg.close().catch(() => {}); await browser.close(); process.exit(3); }
 
 // 3) Click SCHEDULE EPISODE → wallet tx pops up for the USER to sign. We DO NOT sign.
 await pg.getByRole('button', { name: /SCHEDULE EPISODE/i }).first().click({ timeout: 6000 });
 await pg.waitForTimeout(3000);
 await pg.screenshot({ path: '/tmp/onchain.png' });
 console.log('\n🖊️  Clicked SCHEDULE EPISODE — a wallet transaction should now be up in your browser. SIGN IT to finish (I do not sign). Then it will appear on slop.computer/.');
+// Tab is deliberately left open: the pending wallet popup belongs to it — closing
+// it here would kill the signature. Tear down after the user signs (re-launching
+// the clone headless does it).
 await browser.close();

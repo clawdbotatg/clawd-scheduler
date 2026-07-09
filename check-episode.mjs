@@ -18,7 +18,9 @@ const r = { calendar: false, youtube: false, twitter: false, onchain: false };
 
 // --- 9223: onchain, twitter, calendar ---
 const social = await chromium.connectOverCDP('http://127.0.0.1:9223');
-const sp = social.contexts()[0].pages()[0] || (await social.contexts()[0].newPage());
+// Own page, closed below — never hijack pages()[0]: it could be a review form
+// or a pending wallet-signing tab, and CDP disconnect wouldn't close it anyway.
+const sp = await social.contexts()[0].newPage();
 
 await sp.goto('https://slop.computer/', { waitUntil: 'domcontentloaded' }); await sp.waitForTimeout(6000);
 r.onchain = slugRe.test((await sp.locator('body').innerText().catch(() => '')) || '');
@@ -44,13 +46,15 @@ await sp.goto(`https://calendar.google.com/calendar/u/0/r/day/${dayUrl}`, { wait
   }
   await sp.keyboard.press('Escape').catch(() => {});
 }
+await sp.close().catch(() => {});
 await social.close();
 
 // --- 9224: youtube ---
 const yt = await chromium.connectOverCDP('http://127.0.0.1:9224');
-const yp = yt.contexts()[0].pages()[0] || (await yt.contexts()[0].newPage());
+const yp = await yt.contexts()[0].newPage();
 await yp.goto('https://studio.youtube.com/channel/UC/livestreaming', { waitUntil: 'domcontentloaded' }); await yp.waitForTimeout(7000);
 { const t = (await yp.locator('body').innerText().catch(() => '')) || ''; r.youtube = handleRe.test(t) && t.includes(monthDay); }
+await yp.close().catch(() => {});
 await yt.close();
 
 console.log(`\n=== ${ep.title} — ${DATE} ===`);

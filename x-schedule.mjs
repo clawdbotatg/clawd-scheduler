@@ -43,6 +43,9 @@ console.log(`X broadcast: ${TITLE}\n  ${MON} ${DAY}, ${YEAR}  ${TIME}–${END_TI
 const browser = await chromium.connectOverCDP(`http://127.0.0.1:${PORT}`);
 const ctx = browser.contexts()[0];
 let pg = ctx.pages().find((p) => /studio\.x\.com/.test(p.url())) || ctx.pages()[0] || (await ctx.newPage());
+// browser.close() only disconnects CDP — park the tab first so no studio.x.com
+// tab lingers in the clone. NOT called on the review path (form left open on purpose).
+const park = async () => { await pg.goto('about:blank').catch(() => {}); };
 await pg.goto('https://studio.x.com/producer', { waitUntil: 'domcontentloaded' });
 await pg.waitForTimeout(6000);
 await pg.bringToFront();
@@ -54,6 +57,7 @@ const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
   const monthDay = DATE.replace(/,\s*\d{4}$/, ''); // "Jun 15, 2026" -> "Jun 15"
   if (new RegExp(`@${ep.handle}\\b`, 'i').test(list) && list.includes(monthDay)) {
     console.log(`✓ X/Twitter: "@${ep.handle}" broadcast already scheduled on ${monthDay} — SKIP (no duplicate).`);
+    await park();
     await browser.close();
     process.exit(0);
   }
@@ -146,4 +150,5 @@ const body = (await pg.locator('body').innerText().catch(() => '')) || '';
 const persisted = new RegExp(TITLE.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(body) && body.includes(`${MON} ${Number(DAY)}`);
 console.log(persisted ? `\nSCHEDULED ✅ — ${TITLE} on ${MON} ${DAY} ${TIME}–${END_TIME}` : '\n⚠ could not confirm in Scheduled list — check manually');
 await pg.screenshot({ path: '/tmp/x-state.png' });
+await park();
 await browser.close();
