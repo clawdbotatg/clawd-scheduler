@@ -82,6 +82,27 @@ can run the whole thing and it only creates what's missing.
   emails) are gitignored. This repo is PUBLIC. Commit as `clawdbotatg` /
   `clawd@buidlguidl.com` over HTTPS (see global ~/.claude/CLAUDE.md).
 
+## Keeping the clone logins alive (don't relearn the cookie-rot lesson)
+
+A cloned Google session dies when it sits IDLE for days — the rotating
+`__Secure-*PSIDTS` tokens go stale and Google kills the fork (looks like cookie
+theft). Two defenses, both in place:
+
+- **`keep-warm.mjs`** (launchd `com.clawd.keepwarm`, every 4h + at login;
+  install/update via `bash keep-warm-install.sh`) touches every clone's
+  sessions headless so their tokens keep rotating, logs to `data/keep-warm.log`
+  + `data/session-status.json`, and fires a macOS notification the moment a
+  session dies. It SKIPS any clone with a headed window (pending wallet
+  signature — never drive it). If a session IS dead: the fix is the cookie
+  copy from the real profile (see memory: quit the real browser ~5s — ALWAYS
+  ask Austin first), then keep-warm holds the new session alive.
+- **Prefer APIs over cookies where possible.** The calendar phase no longer
+  needs a browser at all in claude.ai-connected sessions: the Google Calendar
+  MCP connector edits the event directly — set `notificationLevel: "NONE"`
+  (the API's "Don't send") or it WILL email the guest. YouTube is the last
+  cookie-dependent Google surface; the eventual fix is the YouTube Data API
+  with a one-time OAuth refresh token.
+
 ## Canonical scripts (ignore the `recon-*`, `explore-*`, `diagnose-*`, `inspect-*`,
 ## `test-*`, `find-slop-*`, `*-tmp` files — those are debug one-offs)
 
