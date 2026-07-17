@@ -27,18 +27,17 @@ import { connectCDP } from './lib/connect.js';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const QUIET = process.argv.includes('--quiet');
 
+// NO GOOGLE CHECKS. The clone holds a FORK of Austin's real Google session:
+// driving it rotates the shared __Secure-*PSIDTS tokens, so his REAL
+// Chrome/Canary is left holding stale ones and Google signs HIM out
+// (2026-07-16: repeated real-YouTube logouts traced to exactly this).
+// Google sessions are refreshed by a hot cookie-copy on scheduling day
+// instead; the durable fix is the YouTube Data API (OAuth refresh token).
 const CLONES = [
   {
     name: 'chrome-ethereum', port: 9223, profile: 'profiles/chrome-ethereum', app: 'chrome',
     checks: [
-      { name: 'google', url: 'https://calendar.google.com/calendar/u/0/r' },
       { name: 'x', url: 'https://x.com/home' },
-    ],
-  },
-  {
-    name: 'canary-concurrence', port: 9224, profile: 'profiles/canary-concurrence', app: 'canary',
-    checks: [
-      { name: 'youtube', url: 'https://studio.youtube.com/' },
     ],
   },
 ];

@@ -82,24 +82,27 @@ can run the whole thing and it only creates what's missing.
   emails) are gitignored. This repo is PUBLIC. Commit as `clawdbotatg` /
   `clawd@buidlguidl.com` over HTTPS (see global ~/.claude/CLAUDE.md).
 
-## Keeping the clone logins alive (don't relearn the cookie-rot lesson)
+## Clone Google sessions (don't relearn the cookie-rot OR the logout lesson)
 
-A cloned Google session dies when it sits IDLE for days — the rotating
-`__Secure-*PSIDTS` tokens go stale and Google kills the fork (looks like cookie
-theft). Two defenses, both in place:
+A cloned Google session is a FORK of Austin's real one, and the two fight over
+the rotating `__Secure-*PSIDTS` tokens. Idle clone → its tokens go stale and
+Google kills the clone's fork (cookie-rot). But the reverse is worse: a clone
+that keeps USING the session rotates the shared tokens out from under Austin's
+REAL browser and **Google signs HIM out** (2026-07-16: his repeated real-YouTube
+logouts were exactly this — keep-warm driving the Google surfaces every 4h).
+So:
 
-- **`keep-warm.mjs`** (launchd `com.clawd.keepwarm`, every 4h + at login;
-  install/update via `bash keep-warm-install.sh`) touches every clone's
-  sessions headless so their tokens keep rotating, logs to `data/keep-warm.log`
-  + `data/session-status.json`, and fires a macOS notification the moment a
-  session dies. It SKIPS any clone with a headed window (pending wallet
-  signature — never drive it). If a session IS dead: the fix is the HOT cookie
-  copy from the real profile — the real browser KEEPS RUNNING (the SQLite lock
-  is advisory; cp Cookies/Login Data/Web Data + journals works live). NEVER
-  quit/pkill Austin's real Chrome/Canary — kill only the clone (pkill by its
-  user-data-dir). If the SOURCE profile is itself signed out (stale PSIDTS ≈ a
-  week), the copy clones a corpse: ask Austin to sign into his REAL profile,
-  then re-copy. Then keep-warm holds the new session alive.
+- **NEVER background-warm a Google session.** `keep-warm.mjs` (launchd
+  `com.clawd.keepwarm`, every 4h; `bash keep-warm-install.sh` to update) now
+  warms ONLY X on 9223 (X tolerates it). Google surfaces are refreshed
+  on-demand instead: on scheduling day, HOT-COPY the auth files from the real
+  profile — the real browser KEEPS RUNNING (the SQLite lock is advisory;
+  cp Cookies/Login Data/Web Data + journals works live). NEVER quit/pkill
+  Austin's real Chrome/Canary — kill only the clone (pkill by its
+  user-data-dir). If the SOURCE profile is itself signed out, the copy clones
+  a corpse: ask Austin to sign into his REAL profile, then re-copy. Expect the
+  clone's Google session to be dead again days later; that's fine — re-copy
+  per episode rather than warming it.
 - **Prefer APIs over cookies where possible.** The calendar phase no longer
   needs a browser at all in claude.ai-connected sessions: the Google Calendar
   MCP connector edits the event directly — set `notificationLevel: "NONE"`
