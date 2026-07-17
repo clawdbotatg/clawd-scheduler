@@ -93,9 +93,13 @@ theft). Two defenses, both in place:
   sessions headless so their tokens keep rotating, logs to `data/keep-warm.log`
   + `data/session-status.json`, and fires a macOS notification the moment a
   session dies. It SKIPS any clone with a headed window (pending wallet
-  signature — never drive it). If a session IS dead: the fix is the cookie
-  copy from the real profile (see memory: quit the real browser ~5s — ALWAYS
-  ask Austin first), then keep-warm holds the new session alive.
+  signature — never drive it). If a session IS dead: the fix is the HOT cookie
+  copy from the real profile — the real browser KEEPS RUNNING (the SQLite lock
+  is advisory; cp Cookies/Login Data/Web Data + journals works live). NEVER
+  quit/pkill Austin's real Chrome/Canary — kill only the clone (pkill by its
+  user-data-dir). If the SOURCE profile is itself signed out (stale PSIDTS ≈ a
+  week), the copy clones a corpse: ask Austin to sign into his REAL profile,
+  then re-copy. Then keep-warm holds the new session alive.
 - **Prefer APIs over cookies where possible.** The calendar phase no longer
   needs a browser at all in claude.ai-connected sessions: the Google Calendar
   MCP connector edits the event directly — set `notificationLevel: "NONE"`
