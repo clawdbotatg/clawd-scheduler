@@ -52,8 +52,12 @@ if (!SUBMIT) { console.log('\nDRY RUN — add --submit to create the broadcast.'
 
 const id = await createBroadcast({ title: ep.title, description: DESC, startISO });
 console.log(`✓ broadcast created: https://studio.youtube.com/video/${id}/livestreaming`);
-if (fs.existsSync(ep.card)) { await setThumbnail(id, ep.card); console.log('✓ thumbnail set'); }
-else console.log(`⚠ card ${ep.card} not on disk — thumbnail NOT set (run the card/publish phases first)`);
+// Thumbnail is secondary — the broadcast already exists, so never let a thumbnail
+// hiccup fail the whole phase (and re-runs idempotently skip, orphaning the retry).
+if (fs.existsSync(ep.card)) {
+  try { await setThumbnail(id, ep.card); console.log('✓ thumbnail set'); }
+  catch (e) { console.log(`⚠ thumbnail NOT set (broadcast is fine): ${e.message.slice(0, 120)}`); }
+} else console.log(`⚠ card ${ep.card} not on disk — thumbnail NOT set (run the card/publish phases first)`);
 
 // Verify like the browser path did: it must now be in Upcoming.
 const after = await listUpcomingBroadcasts();

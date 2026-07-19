@@ -52,11 +52,19 @@ try {
   // Open the matching event → Edit.
   const ids = await page.evaluate(() => [...new Set([...document.querySelectorAll('[data-eventid]')].map((e) => e.getAttribute('data-eventid')))]);
   let opened = false;
+  // Calendly books a 15-min "Prepare: SLOP.COMPUTER" reminder right before each
+  // episode, and it carries the SAME guest email in its description — so a match
+  // on the email (or a bare title) can land on the PREP event and leave the real
+  // episode still showing the TODO placeholder (this mis-linked Lincoln + loaf,
+  // 2026-07-19). Never treat a "Prepare:" event as the episode, unless the caller
+  // explicitly asked for one.
+  const wantsPrepare = /\bprepare\b/i.test(MATCH);
   for (const id of ids) {
     await page.locator(`[data-eventid="${id}"]`).first().click({ timeout: 6000 }).catch(() => {});
     await page.waitForTimeout(1200);
     const t = (await page.locator('[role="dialog"]').first().innerText().catch(() => '')) || '';
-    if (t.toLowerCase().includes(MATCH.toLowerCase())) { opened = true; break; }
+    const isPrepare = /\bPrepare:\s*SLOP/i.test(t);
+    if (t.toLowerCase().includes(MATCH.toLowerCase()) && (wantsPrepare || !isPrepare)) { opened = true; break; }
     await page.keyboard.press('Escape');
     await page.waitForTimeout(400);
   }
