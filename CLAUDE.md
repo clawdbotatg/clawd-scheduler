@@ -106,9 +106,17 @@ So:
 - **Prefer APIs over cookies where possible.** The calendar phase no longer
   needs a browser at all in claude.ai-connected sessions: the Google Calendar
   MCP connector edits the event directly — set `notificationLevel: "NONE"`
-  (the API's "Don't send") or it WILL email the guest. YouTube is the last
-  cookie-dependent Google surface; the eventual fix is the YouTube Data API
-  with a one-time OAuth refresh token.
+  (the API's "Don't send") or it WILL email the guest. **YouTube is now
+  cookie-free too**: `schedule-youtube-api.mjs` (+ `lib/yt-api.mjs`) drives the
+  YouTube Data API with an OAuth refresh token from the gitignored `.env`
+  (`YT_CLIENT_ID`/`YT_CLIENT_SECRET`/`YT_REFRESH_TOKEN`; one-time consent via
+  `node yt-oauth-setup.mjs`, approved by the channel account
+  austin@concurrence.io). The orchestrator's `youtube` phase and
+  `check-episode.mjs` both prefer the API and only fall back to the 9224
+  browser clone (`fill-yt-schedule.js`, gated behind `CHK_YT=1` for checks)
+  when the creds are missing. With the API in place, NOTHING should drive the
+  clone's Google session — that fork war is what kept signing Austin's real
+  browser out (see the keep-warm saga).
 
 ## Canonical scripts (ignore the `recon-*`, `explore-*`, `diagnose-*`, `inspect-*`,
 ## `test-*`, `find-slop-*`, `*-tmp` files — those are debug one-offs)

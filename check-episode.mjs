@@ -11,6 +11,7 @@ const monthDay = DATE.replace(/,\s*\d{4}$/, '');             // "Jun 18"
 const dm = DATE.match(/^([A-Za-z]{3})[a-z]*\s+(\d{1,2}),\s+(\d{4})$/);
 const MONTHS = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 };
 const dayUrl = `${dm[3]}/${MONTHS[dm[1]]}/${Number(dm[2])}`;  // 2026/6/18
+const isoDay = `${dm[3]}-${String(MONTHS[dm[1]]).padStart(2, '0')}-${String(dm[2]).padStart(2, '0')}`; // 2026-06-18
 const handleRe = new RegExp(`@${ep.handle}\\b`, 'i');
 const slugRe = new RegExp(ep.slug.replace(/-/g, '[- ]?'), 'i');
 
@@ -49,15 +50,31 @@ await sp.goto(`https://calendar.google.com/calendar/u/0/r/day/${dayUrl}`, { wait
 await sp.close().catch(() => {});
 await social.close();
 
-// --- 9224: youtube ---
-const yt = await chromium.connectOverCDP('http://127.0.0.1:9224');
-const yp = await yt.contexts()[0].newPage();
-await yp.goto('https://studio.youtube.com/channel/UC/livestreaming', { waitUntil: 'domcontentloaded' }); await yp.waitForTimeout(7000);
-{ const t = (await yp.locator('body').innerText().catch(() => '')) || ''; r.youtube = handleRe.test(t) && t.includes(monthDay); }
-await yp.close().catch(() => {});
-await yt.close();
+// --- youtube: API first (cookie-free), else opt-in browser check (CHK_YT=1) ---
+// Driving the 9224 clone's Google session rotates the shared tokens and can sign
+// Austin's REAL browser out (the 2026-07 logout saga) — so the cookie/browser
+// check no longer runs by default.
+let ytChecked = true;
+try {
+  const { listUpcomingBroadcasts } = await import('./lib/yt-api.mjs');
+  const denverDay = (iso) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
+  const upcoming = await listUpcomingBroadcasts();
+  r.youtube = upcoming.some((b) => handleRe.test(b.title) && b.scheduledStart && denverDay(b.scheduledStart) === isoDay);
+} catch (e) {
+  if (process.env.CHK_YT === '1') {
+    const yt = await chromium.connectOverCDP('http://127.0.0.1:9224');
+    const yp = await yt.contexts()[0].newPage();
+    await yp.goto('https://studio.youtube.com/channel/UC/livestreaming', { waitUntil: 'domcontentloaded' }); await yp.waitForTimeout(7000);
+    { const t = (await yp.locator('body').innerText().catch(() => '')) || ''; r.youtube = handleRe.test(t) && t.includes(monthDay); }
+    await yp.close().catch(() => {});
+    await yt.close();
+  } else {
+    ytChecked = false;
+    console.log(`(youtube: not checked — no API creds (${e.message.slice(0, 60)}); set CHK_YT=1 to force the cookie/browser check)`);
+  }
+}
 
 console.log(`\n=== ${ep.title} — ${DATE} ===`);
-for (const k of ['calendar', 'youtube', 'twitter', 'onchain']) console.log(`  ${k.padEnd(9)} ${r[k] ? '✅ done' : '❌ MISSING'}`);
+for (const k of ['calendar', 'youtube', 'twitter', 'onchain']) console.log(`  ${k.padEnd(9)} ${k === 'youtube' && !ytChecked ? '❔ not checked' : r[k] ? '✅ done' : '❌ MISSING'}`);
 const missing = Object.keys(r).filter((k) => !r[k]);
 console.log(missing.length ? `\nMISSING: ${missing.join(', ')}` : '\nALL DONE ✅');
