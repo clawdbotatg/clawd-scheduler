@@ -348,8 +348,10 @@ it. (Recon: `recon-category.js`.)
 create. Fields, in order:
 - broadcast name = `episode(handle).title` (same as YouTube)
 - category = **Technology** (typeahead `Add Category`; keyboard fallback)
-- source = **Slop.Computer** — set via the underlying native `<select>`
-  (`selectOption({label})`); the visible "Select a source" button is just a skin
+- source = **Slop.Computer(NEW)** — NOT the old `Slop.Computer` source. Set via
+  the underlying native `<select>` (`selectOption({label})`, whitespace-insensitive
+  match; hard-fails if the source is missing rather than keeping the form default);
+  the visible "Select a source" button is just a skin. Override with `X_SOURCE`.
 - audience = Public (default), chat = Verified accounts (default)
 - schedule = **Start later** → Starts/Ends. Each datetime field is a `<button>`
   that opens a calendar popup — **you cannot type raw text into it**; pick the

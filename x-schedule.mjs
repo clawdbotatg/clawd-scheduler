@@ -20,7 +20,7 @@ if (!process.env.X_HANDLE || !DATE || !TIME) { console.error('set X_HANDLE, X_DA
 const ep = episode(process.env.X_HANDLE);
 const TITLE = process.env.X_TITLE || ep.title;
 const POSTER = process.env.X_POSTER || ep.card;          // /tmp/<slug>card.png
-const SOURCE = process.env.X_SOURCE || 'Slop.Computer';   // X media-studio source name
+const SOURCE = process.env.X_SOURCE || 'Slop.Computer(NEW)';   // X media-studio source name — NOT the old 'Slop.Computer'
 const CATEGORY = process.env.X_CATEGORY || 'Technology';
 const DURATION_MIN = Number(process.env.X_DURATION_MIN || 70);
 const PORT = Number(process.env.SLOP_PORT_SOCIAL || 9223);
@@ -82,12 +82,21 @@ if (await catOpt.count().catch(() => 0)) await catOpt.click({ timeout: 4000 }).t
 if (!catClicked) { await pg.keyboard.press('ArrowDown'); await pg.keyboard.press('Enter'); }
 await pg.waitForTimeout(700); console.log('✓ category');
 
-// source via the underlying native <select>
-for (const sel of await pg.$$('select')) {
-  const labels = await sel.$$eval('option', (os) => os.map((o) => o.textContent.trim()));
-  if (labels.includes(SOURCE)) { await sel.selectOption({ label: SOURCE }); break; }
+// source via the underlying native <select> — whitespace-insensitive match so
+// "Slop.Computer(NEW)" also finds a "Slop.Computer (NEW)" label, but never the
+// bare old "Slop.Computer". Hard-fail if absent: silently keeping the form's
+// default would schedule on the wrong source.
+{
+  const want = SOURCE.replace(/\s+/g, '').toLowerCase();
+  let picked = null;
+  for (const sel of await pg.$$('select')) {
+    const labels = await sel.$$eval('option', (os) => os.map((o) => o.textContent.trim()));
+    const hit = labels.find((l) => l.replace(/\s+/g, '').toLowerCase() === want);
+    if (hit) { await sel.selectOption({ label: hit }); picked = hit; break; }
+  }
+  if (!picked) { console.error(`✗ source "${SOURCE}" not found in any <select> — refusing to schedule on the wrong source. Check the source list in Media Studio.`); await browser.close(); process.exit(1); }
+  await pg.waitForTimeout(700); console.log(`✓ source (${picked})`);
 }
-await pg.waitForTimeout(700); console.log('✓ source');
 
 // schedule → Start later
 await pg.getByText('Start later', { exact: true }).first().click({ timeout: 5000 });
