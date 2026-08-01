@@ -55,7 +55,9 @@ const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 {
   const list = (await pg.locator('body').innerText().catch(() => '')) || '';
   const monthDay = DATE.replace(/,\s*\d{4}$/, ''); // "Jun 15, 2026" -> "Jun 15"
-  if (new RegExp(`@${ep.handle}\\b`, 'i').test(list) && list.includes(monthDay)) {
+  // (?!\d) so "Aug 1" doesn't match the "Aug 14"/"Aug 21" rows (a plain
+  // substring match once skipped a legit schedule because of exactly that).
+  if (new RegExp(`@${ep.handle}\\b`, 'i').test(list) && new RegExp(`${monthDay}(?!\\d)`).test(list)) {
     console.log(`✓ X/Twitter: "@${ep.handle}" broadcast already scheduled on ${monthDay} — SKIP (no duplicate).`);
     await park();
     await browser.close();
