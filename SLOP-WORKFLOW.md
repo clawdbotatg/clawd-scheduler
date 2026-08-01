@@ -342,6 +342,17 @@ stays open and swallows the category click — press **Escape first** to dismiss
 it. (Recon: `recon-category.js`.)
 
 ## Detail — step 13: schedule the X/Twitter livestream  ✅
+> **⚠ PRODUCER'S SCHEDULED AUTO-START IS DEAD (2026-08-01).** X replaced Media
+> Studio Producer with **Live Studio** (studio.x.com/live) in early July 2026 and
+> Producer-scheduled broadcasts stopped flipping live on their own (on time
+> Jul 28–29 → 11 min late Jul 30 → never again; two controlled 2026-08-01 tests
+> failed with a healthy feed). Also learned: a stuck SCHEDULED broadcast never
+> times out — it blocks its source until its end time (delete it to free the
+> source), and it cannot be converted to Start-immediately (rescue =
+> `go-live-now.mjs`, new URL). Test auto-start with zero public footprint via
+> `private-autostart-test.mjs`. **Do not trust this section for go-live until the
+> pipeline is migrated to Live Studio and a private test proves auto-start.**
+
 `x-schedule.mjs` drives **X Media Studio → Producer → Create broadcast** on the
 **9223 clone** (Chrome with the user's X login). Env inputs:
 `X_HANDLE X_DATE X_TIME X_DURATION_MIN` (default 70); `--submit` to actually
