@@ -18,3 +18,4 @@ edit-port-event.js
 test-resolve-*.mjs
 # Deps
 node_modules/
+.showtime-state/

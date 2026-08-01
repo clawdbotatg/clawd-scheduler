@@ -362,6 +362,22 @@ it. (Recon: `recon-category.js`.)
 > `private-autostart-test.mjs` (Producer) — note Live Studio's native form has
 > NO private option (Audience tab = chat + geo only).
 
+> **SHOWTIME IS FULLY AUTOMATED (2026-08-01):** the launchd job
+> **`com.clawd.slop-showtime`** (`bash showtime-install.sh` to install/refresh)
+> runs `showtime-arm.mjs` every 5 min. When a YouTube-scheduled broadcast is
+> within 10 min it: switches on the relay fanouts (`/admin/fanouts/*` on
+> live.slop.computer, host-token auth via `.env` `SLOP_TOKEN`), arms
+> `go-live-youtube.mjs` (bind active key → transition live at T) and
+> `x-live-watchdog.mjs` (Go Live at T+15s), then watches the feed and
+> auto-stops everything (YT transition complete, `end-x-livestream.mjs`,
+> fanouts off) once the feed is gone ~6 min. Austin's whole lifecycle:
+> **OBS start … OBS stop.** Proven end-to-end 2026-08-01 3:30 PM (both
+> platforms live at 3:30:22, clean teardown). Requirements: this Mac awake,
+> 9223 clone (auto-launched headless if down), YT OAuth creds + the episode
+> room's SLOP_TOKEN in `.env` (set during scheduling). New-broadcast creation:
+> `livestudio-create.mjs` (Live Studio native; pass `X_POSTER=/tmp/<slug>card.png`
+> or the tweet card has no image).
+
 `x-schedule.mjs` drives **X Media Studio → Producer → Create broadcast** on the
 **9223 clone** (Chrome with the user's X login). Env inputs:
 `X_HANDLE X_DATE X_TIME X_DURATION_MIN` (default 70); `--submit` to actually

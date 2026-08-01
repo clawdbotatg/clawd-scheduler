@@ -188,4 +188,38 @@ await pg.goto('https://studio.x.com/live', { waitUntil: 'domcontentloaded' });
 await until((t) => document.body.innerText.includes(t), TITLE, 'new livestream in list', 15);
 console.log(`CREATED ✅ — "${TITLE}" is in the Live Studio list`);
 await shot('list-after');
+
+// thumbnail: the episode card becomes the tweet's link-preview image, so this
+// is NOT optional for real episodes (2026-08-01: skipped it once, tweet had no
+// card). Uses the details page's "Edit thumbnail" — proven path.
+const POSTER = process.env.X_POSTER;
+if (POSTER) {
+  const fsMod = await import('node:fs');
+  if (!fsMod.existsSync(POSTER)) await die(`✗ poster ${POSTER} not on disk`);
+  await pg.locator('div,tr').filter({ hasText: TITLE }).last().click();
+  await pg.waitForTimeout(4000);
+  if (!/\/live\/\w+/.test(pg.url())) await die(`✗ could not open details page for thumbnail (url=${pg.url()})`);
+  let clicked = false;
+  for (let i = 0; i < 15 && !clicked; i++) {
+    await pg.waitForTimeout(2500);
+    clicked = await pg.evaluate(() => {
+      const e = [...document.querySelectorAll('button,[role=button]')].find((x) => /Edit thumbnail/i.test(x.innerText) && x.getBoundingClientRect().width > 0);
+      if (e) { e.click(); return true; } return false;
+    });
+  }
+  if (!clicked) await die('✗ Edit thumbnail button never appeared');
+  await pg.waitForTimeout(2000);
+  const fi = pg.locator('input[type=file]').first();
+  if (!(await fi.count())) await die('✗ no file input after Edit thumbnail');
+  await fi.setInputFiles(POSTER);
+  await pg.waitForTimeout(4000);
+  const saved = await pg.evaluate(() => {
+    const d = document.querySelector('[role=dialog],[aria-modal]') || document;
+    const e = [...d.querySelectorAll('button')].find((b) => /^(Save|Apply|Upload|Done|Set thumbnail|Confirm)$/i.test(b.innerText.trim()) && b.getBoundingClientRect().width > 0 && !b.disabled);
+    if (e) { e.click(); return true; } return false;
+  });
+  if (!saved) await die('✗ thumbnail Save button not found');
+  await pg.waitForTimeout(4000);
+  console.log('✓ thumbnail set');
+} else console.log('⚠ no X_POSTER given — thumbnail NOT set (tweet card will have no image)');
 await park();
