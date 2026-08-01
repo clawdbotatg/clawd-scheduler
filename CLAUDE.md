@@ -43,6 +43,26 @@ Phases (in order): `room research pfp card publish calendar youtube twitter onch
 For an episode that's partly done, the idempotent phases skip what exists — so you
 can run the whole thing and it only creates what's missing.
 
+## Going live is AUTOMATED — do not manually babysit showtime
+
+The launchd job **com.clawd.slop-showtime** (`showtime-arm.mjs`, installed via
+`bash showtime-install.sh`) handles every episode's go-live end to end: ~10 min
+before a YouTube-scheduled broadcast it switches on the relay fanouts, fires
+YouTube live at T (`go-live-youtube.mjs`) and X live at T+15s
+(`x-live-watchdog.mjs` — X's own scheduled auto-start is DEAD since Jul 2026,
+never trust it), then auto-stops everything ~6 min after the OBS feed ends.
+Austin's only showtime job: start/stop OBS. What scheduling must leave behind
+for it: the YT broadcast + X livestream (same title/time) and the room's
+SLOP_TOKEN in `.env`. If an episode is RESCHEDULED after arming, delete its
+`.showtime-state/<ytBroadcastId>.armed` marker. Details in SLOP-WORKFLOW.md
+(step 13 warning block + showtime block).
+
+Known open issue: the slop YT fanout shares the channel's "Default stream key"
+with Clawd Conclave's auto-start broadcasts — a scheduled Conclave broadcast
+bound to that key WILL auto-start when a slop episode streams (it happened
+2026-08-01; the stray video was deleted). Fix pending: dedicated slop stream
+key + relay env update on the EC2 box.
+
 ## Hard rules (each was an expensive lesson — do not relearn them)
 
 - **Idempotent / no duplicates.** Every scheduling surface skips if already done
