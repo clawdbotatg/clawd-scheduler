@@ -342,16 +342,25 @@ stays open and swallows the category click — press **Escape first** to dismiss
 it. (Recon: `recon-category.js`.)
 
 ## Detail — step 13: schedule the X/Twitter livestream  ✅
-> **⚠ PRODUCER'S SCHEDULED AUTO-START IS DEAD (2026-08-01).** X replaced Media
-> Studio Producer with **Live Studio** (studio.x.com/live) in early July 2026 and
-> Producer-scheduled broadcasts stopped flipping live on their own (on time
-> Jul 28–29 → 11 min late Jul 30 → never again; two controlled 2026-08-01 tests
-> failed with a healthy feed). Also learned: a stuck SCHEDULED broadcast never
-> times out — it blocks its source until its end time (delete it to free the
-> source), and it cannot be converted to Start-immediately (rescue =
-> `go-live-now.mjs`, new URL). Test auto-start with zero public footprint via
-> `private-autostart-test.mjs`. **Do not trust this section for go-live until the
-> pipeline is migrated to Live Studio and a private test proves auto-start.**
+> **⚠ X'S SCHEDULED AUTO-START IS DEAD EVERYWHERE (2026-08-01) — ARM THE
+> WATCHDOG FOR EVERY EPISODE.** X replaced Media Studio Producer with **Live
+> Studio** (studio.x.com/live) in early July 2026 and scheduled streams stopped
+> flipping live on their own (on time Jul 28–29 → 11 min late Jul 30 → never
+> again; three controlled 2026-08-01 tests failed with a healthy feed — two
+> Producer-created AND one created natively in Live Studio's New Livestream
+> flow via `livestudio-create.mjs`, Auto-start toggle ON). Creation surface
+> doesn't matter; the trigger itself is dead account-wide. **The fix is
+> `x-live-watchdog.mjs`** (proven twice on 2026-08-01, 12:25 + 1:22 tests): it
+> sits on the stream's Live Studio details page and presses Go Live at the
+> scheduled minute if X hasn't — SAME stream, same `x.com/i/broadcasts/<id>`
+> URL, so the card tweeted the day before keeps working. Arm before showtime:
+> `X_TITLE='<exact title>' X_FIRE_AT='<H:MM PM>' node x-live-watchdog.mjs --arm
+> [--grace 15]`. Also learned: a stuck SCHEDULED broadcast never times out — it
+> blocks its source until its end time (delete it to free the source), and it
+> cannot be converted to Start-immediately (rescue = `go-live-now.mjs`, new
+> URL). Test auto-start with zero public footprint via
+> `private-autostart-test.mjs` (Producer) — note Live Studio's native form has
+> NO private option (Audience tab = chat + geo only).
 
 `x-schedule.mjs` drives **X Media Studio → Producer → Create broadcast** on the
 **9223 clone** (Chrome with the user's X login). Env inputs:

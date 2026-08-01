@@ -37,9 +37,14 @@ const die = async (msg, code) => { console.log(msg); await pg.screenshot({ path:
 
 // find the livestream by title in Live Studio and open its details page
 await pg.goto('https://studio.x.com/live', { waitUntil: 'domcontentloaded' });
-await pg.waitForTimeout(6000);
+// the list can skeleton-load for 30s+ — poll for the row instead of a fixed wait
+let found = false;
+for (let i = 0; i < 25 && !found; i++) {
+  await pg.waitForTimeout(2500);
+  found = await pg.evaluate((t) => document.body.innerText.includes(t), TITLE);
+}
+if (!found) await die(`✗ livestream "${TITLE}" not found in Live Studio`, 1);
 const row = pg.locator('div,tr').filter({ hasText: TITLE }).last();
-if (!(await row.count())) await die(`✗ livestream "${TITLE}" not found in Live Studio`, 1);
 await row.click({ timeout: 8000 });
 await pg.waitForTimeout(4000);
 if (!/\/live\/\w+/.test(pg.url())) await die(`✗ clicking the row did not open a details page (url=${pg.url()})`, 1);
