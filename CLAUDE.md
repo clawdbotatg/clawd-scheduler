@@ -148,3 +148,6 @@ So:
 orchestrated by **`slop-episode.mjs`**. Config + per-episode derivation: `lib/config.js`.
 
 Full per-step detail, selectors, and the hard-won UI gotchas are in **`SLOP-WORKFLOW.md`**.
+
+**Moving/adding a machine:** `NEW-MACHINE.md` — what's in the repo vs what must be
+hand-carried (`.env`, `profiles/`, `data/`), and the one-machine-only launchd rule.

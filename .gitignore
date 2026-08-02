@@ -7,6 +7,9 @@ storage/
 data/
 *-skill.txt
 *-pfp.*
+# …but *-pfp.* must not swallow the canonical scripts themselves:
+!get-pfp.js
+!card-from-pfp.mjs
 # Local secrets / env (but DO commit the .env.example template)
 .env
 .env.*
