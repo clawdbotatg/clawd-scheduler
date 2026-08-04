@@ -57,6 +57,9 @@ function ensureClone() { // the X leg needs the 9223 headless clone
 }
 
 function run(cmd, args, env, tag) { // spawn a leg, stream its lines into our log
+  // launchd's PATH has no `node` — resolve it to the running binary or the
+  // legs die at spawn with ENOENT (2026-08-02: killed a show's go-live).
+  if (cmd === 'node') cmd = process.execPath;
   return new Promise((resolve) => {
     const p = spawn(cmd, args, { cwd: HERE, env: { ...process.env, ...env } });
     const pipe = (s) => s.on('data', (d) => String(d).trim().split('\n').forEach((l) => l && log(`${tag}: ${l}`)));
