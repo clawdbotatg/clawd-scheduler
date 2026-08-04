@@ -22,16 +22,26 @@ async function openEventDetail(page, start, titleMatch) {
   await page.goto(`https://calendar.google.com/calendar/u/0/r/day/${y}/${m}/${d}`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2800);
   const ids = await page.evaluate(() => [...new Set([...document.querySelectorAll('[data-eventid]')].map((e) => e.getAttribute('data-eventid')))]);
+  // Title alone is ambiguous: a "Prepare: <title>" companion event contains the
+  // title as a substring and has no guest list. Pin the exact event by its
+  // start time too ("⋅5:00" in the dialog's date line), falling back to the
+  // first title-only match if no dialog carries the expected time.
+  const hh = ((start.getHours() + 11) % 12) + 1;
+  const timeNeedle = `⋅${hh}:${String(start.getMinutes()).padStart(2, '0')}`;
+  let titleOnly = '';
   for (const id of ids) {
     const chip = page.locator(`[data-eventid="${id}"]`).first();
     await chip.click({ timeout: 6000 }).catch(() => {});
     await page.waitForTimeout(1200);
     const text = (await page.locator('[role="dialog"]').first().innerText().catch(() => '')) || '';
     await page.keyboard.press('Escape');
-    if (text.toLowerCase().includes(titleMatch.toLowerCase())) return text;
+    if (text.toLowerCase().includes(titleMatch.toLowerCase())) {
+      if (text.includes(timeNeedle)) return text;
+      if (!titleOnly) titleOnly = text;
+    }
     await page.waitForTimeout(350);
   }
-  return '';
+  return titleOnly;
 }
 
 function guestEmailFrom(detail) {

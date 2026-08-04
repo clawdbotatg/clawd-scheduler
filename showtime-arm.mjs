@@ -24,7 +24,7 @@ import { listUpcomingBroadcasts, getBroadcast, listStreams, transitionBroadcast 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STATE = path.join(HERE, '.showtime-state');
 fs.mkdirSync(STATE, { recursive: true });
-const LEAD_MIN = Number(process.env.SHOWTIME_LEAD_MIN || 10);
+const LEAD_MIN = Number(process.env.SHOWTIME_LEAD_MIN || 5);
 const STOP_AFTER_MIN = Number(process.env.SHOWTIME_STOP_AFTER_MIN || 6);
 const stamp = () => new Date().toLocaleTimeString();
 const log = (...a) => console.log(`[${stamp()}]`, ...a);
@@ -86,10 +86,12 @@ await fanout('start');
 const cloneOk = ensureClone();
 const fireAt = localHM(next.scheduledStart);
 
+// process.execPath, not 'node': under launchd PATH has no node dir, so a bare
+// 'node' spawn dies ENOENT after the fanouts are already on (2026-08-02).
 const legs = [
-  run('node', ['go-live-youtube.mjs', '--id', next.id, '--at', fireAt, '--arm'], {}, 'YT'),
+  run(process.execPath, ['go-live-youtube.mjs', '--id', next.id, '--at', fireAt, '--arm'], {}, 'YT'),
 ];
-if (cloneOk) legs.push(run('node', ['x-live-watchdog.mjs', '--arm', '--grace', '15'], { X_TITLE: next.title, X_FIRE_AT: fireAt }, 'X'));
+if (cloneOk) legs.push(run(process.execPath, ['x-live-watchdog.mjs', '--arm', '--grace', '15'], { X_TITLE: next.title, X_FIRE_AT: fireAt }, 'X'));
 else log('⚠ X leg skipped (no clone) — YouTube still fires');
 const codes = await Promise.all(legs);
 log(`go-live legs done (exit codes: ${codes.join(',')})`);
