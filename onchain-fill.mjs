@@ -26,7 +26,7 @@ const cmd = async (c, args = {}) => {
 // 1) Find the admin tab (never open/navigate one — wallet connect is manual).
 const tabs = await cmd('tabs');
 const list = Array.isArray(tabs) ? tabs : tabs.tabs || [];
-const tab = list.find((t) => /slop\.computer\/admin/.test(t.url || ''));
+const tab = list.find((t) => /\/\/slop\.computer\/admin/.test(t.url || '')); // NOT live.slop.computer/admin (relay rooms admin — no wallet form)
 if (!tab) { console.error('✗ no slop.computer/admin tab open. Ask Austin to open it and connect Rainbow (slop.atg.eth), then re-run.'); process.exit(2); }
 const tab_id = tab.tab_id;
 console.log(`admin tab: ${tab_id} (${tab.url})`);
