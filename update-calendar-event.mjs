@@ -11,6 +11,7 @@
 // Without --save it's a DRY RUN (fills the editor, screenshots /tmp/event-edited.png,
 // does not save). With --save it saves silently.
 import { connectCDP } from './lib/connect.js';
+import { PORTS } from './lib/config.js';
 
 const args = process.argv.slice(2);
 const arg = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
@@ -43,7 +44,7 @@ const q = (await (await fetch('https://live.slop.computer/v1/admin/questions', {
 const content = `${INTRO}\n\n${LINK}\n\n${q}`;
 const boldTexts = [...content.matchAll(/\*\*(.*?)\*\*/g)].map((m) => m[1]);
 
-const { browser, page } = await connectCDP(9223);
+const { browser, page } = await connectCDP(PORTS.social);
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 try {
   await page.goto(`https://calendar.google.com/calendar/u/0/r/day/${DAY}`, { waitUntil: 'domcontentloaded' });

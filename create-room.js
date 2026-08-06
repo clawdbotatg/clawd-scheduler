@@ -3,6 +3,7 @@
 // room appears in the admin list.
 //   node create-room.js <slug>
 import { connectCDP } from './lib/connect.js';
+import { PORTS } from './lib/config.js';
 import { handleToSlug } from './lib/slugify.js';
 
 const raw = (process.argv[2] || '').trim();
@@ -12,7 +13,7 @@ if (!raw) { console.error('usage: node create-room.js <slug-or-handle>'); proces
 const slug = handleToSlug(raw);
 if (slug !== raw.replace(/^@/, '').toLowerCase()) console.log(`(slugified "${raw}" -> "${slug}")`);
 
-const { browser, page } = await connectCDP(9223);
+const { browser, page } = await connectCDP(PORTS.social);
 try {
   await page.goto('https://live.slop.computer/admin', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3500);

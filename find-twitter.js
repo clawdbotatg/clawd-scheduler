@@ -7,6 +7,7 @@
 //
 // Returns the verified handle, or flags UNCONFIRMED (-> stop and ask).
 import { connectCDP } from './lib/connect.js';
+import { PORTS } from './lib/config.js';
 
 const query = process.argv[2] || 'port dev twitter';
 const keywords = (process.argv[3] || 'monad,buidlguidl')
@@ -29,7 +30,7 @@ function handleFromUrl(u) {
   } catch { return null; }
 }
 
-const { browser, page } = await connectCDP(9223);
+const { browser, page } = await connectCDP(PORTS.social);
 try {
   await page.goto('https://www.google.com/search?q=' + encodeURIComponent(query), { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);

@@ -1,5 +1,6 @@
 import { connectCDP } from './lib/connect.js';
-const { browser, page } = await connectCDP(9223);
+import { PORTS } from './lib/config.js';
+const { browser, page } = await connectCDP(PORTS.social);
 await page.goto('https://x.com/port_dev', { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(4500);
 const info = await page.evaluate(() => ({

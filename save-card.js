@@ -1,4 +1,5 @@
 import { connectCDP } from './lib/connect.js';
+import { PORTS } from './lib/config.js';
 import fs from 'node:fs';
 
 const SLUG = process.argv[2];
@@ -6,7 +7,7 @@ const URL = process.argv[3]; // full room URL incl. ?invite=...
 if (!SLUG || !URL) { console.error('usage: node save-card.js <slug> \'<roomUrl with ?invite=...>\' [outPath]'); process.exit(1); }
 const OUT = process.argv[4] || `/tmp/${SLUG}card.png`;
 
-const { browser, page } = await connectCDP(9223);
+const { browser, page } = await connectCDP(PORTS.social);
 await page.goto(URL, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(6000);
 

@@ -2,6 +2,7 @@
 // READ-ONLY. If found -> report. If not -> emit the exact ask for Austin (no create).
 //   node find-room.js <handle>
 import { connectCDP } from './lib/connect.js';
+import { PORTS } from './lib/config.js';
 import { handleToSlug } from './lib/slugify.js';
 
 const rawHandle = (process.argv[2] || '').replace(/^@/, '');
@@ -10,7 +11,7 @@ if (!rawHandle) { console.error('usage: node find-room.js <handle>'); process.ex
 const handle = handleToSlug(rawHandle);
 if (handle !== rawHandle.toLowerCase()) console.log(`handle @${rawHandle} -> room slug "${handle}" (contract rule [a-z0-9-])`);
 
-const { browser, page } = await connectCDP(9223);
+const { browser, page } = await connectCDP(PORTS.social);
 try {
   await page.goto('https://live.slop.computer/admin', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(4000);

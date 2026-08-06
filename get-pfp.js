@@ -1,9 +1,10 @@
 import { connectCDP } from './lib/connect.js';
+import { PORTS } from './lib/config.js';
 import fs from 'node:fs';
 
 if (!process.argv[2]) { console.error('usage: node get-pfp.js <handle>'); process.exit(1); }
 const handle = process.argv[2].replace(/^@/, '');
-const { browser, page } = await connectCDP(9223);
+const { browser, page } = await connectCDP(PORTS.social);
 await page.goto(`https://x.com/${handle}`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(4000);
 
