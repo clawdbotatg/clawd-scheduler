@@ -2,7 +2,7 @@
 // surfaces are already done vs missing. Changes nothing.
 //   CHK_HANDLE=port_dev CHK_DATE='Jun 18, 2026' node check-episode.mjs
 import { chromium } from 'playwright';
-import { episode } from './lib/config.js';
+import { episode, PORTS } from './lib/config.js';
 
 if (!process.env.CHK_HANDLE || !process.env.CHK_DATE) { console.error('set CHK_HANDLE and CHK_DATE ("Mon DD, YYYY")'); process.exit(1); }
 const ep = episode(process.env.CHK_HANDLE);
@@ -17,8 +17,8 @@ const slugRe = new RegExp(ep.slug.replace(/-/g, '[- ]?'), 'i');
 
 const r = { calendar: false, youtube: false, twitter: false, onchain: false };
 
-// --- 9223: onchain, twitter, calendar ---
-const social = await chromium.connectOverCDP('http://127.0.0.1:9223');
+// --- social clone (SLOP_PORT_SOCIAL): onchain, twitter, calendar ---
+const social = await chromium.connectOverCDP(`http://127.0.0.1:${PORTS.social}`);
 // Own page, closed below — never hijack pages()[0]: it could be a review form
 // or a pending wallet-signing tab, and CDP disconnect wouldn't close it anyway.
 const sp = await social.contexts()[0].newPage();
