@@ -13,7 +13,10 @@ Runs against the logged-in profile clones (see `~/.claude/skills/browser-automat
 > the thumbnail upload failing — never again.)
 
 Two browsers in play:
-- **9223** — Chrome clone, `ethereum.org` Google login (calendar) **and** the user's
+- **9223** (default; **9225 on clawd-heart** via `SLOP_PORT_SOCIAL` in `.env` — on
+  heart 9223 is squatted by the twitter-reader's `chrome-x` clone, the WRONG X
+  account, and attaching to it makes every X step silently fail) — Chrome clone,
+  `ethereum.org` Google login (calendar) **and** the user's
   X/Twitter session (the profile clone carried BOTH — that's how we read X as the user).
 - **9224** — Canary clone (`profiles/canary-concurrence`), YouTube channel, for the
   broadcast step. Launch headless (no focus steal): `bash launch-clone.sh

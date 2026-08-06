@@ -12,9 +12,11 @@ double-books).
 
 ```bash
 # 0) Bring up the two logged-in browser clones HEADLESS (no focus steal).
-#    9223 = Chrome (calendar + the user's X + austingriffith.eth wallet)
+#    Social clone port = SLOP_PORT_SOCIAL from .env (9225 on clawd-heart — 9223
+#    there belongs to the twitter-reader's chrome-x clone, the WRONG X account;
+#    9223 is the default elsewhere) = Chrome (calendar + user's X + wallet).
 #    9224 = Canary (the YouTube channel)
-bash launch-clone.sh "$PWD/profiles/chrome-ethereum"    9223 headless chrome
+bash launch-clone.sh "$PWD/profiles/chrome-ethereum"    "${SLOP_PORT_SOCIAL:-9223}" headless chrome
 bash launch-clone.sh "$PWD/profiles/canary-concurrence" 9224 headless
 
 # 1) Find the next episode whose calendar location is still a `TODO` placeholder.

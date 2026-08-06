@@ -4,6 +4,7 @@
 // Run standalone:  node workflows/find-next-slop.js
 // Or import { findNextSlopNeedingLink } and use the structured result.
 import { connectCDP } from '../lib/connect.js';
+import { PORTS } from '../lib/config.js';
 
 const MONTHS = {
   january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
@@ -89,7 +90,7 @@ export async function searchSlopEpisodes(page) {
   return { now: now.toISOString(), all: events, upcomingEpisodes, episodesNeedingLink, nextNeedingLink };
 }
 
-export async function findNextSlopNeedingLink(port = 9223) {
+export async function findNextSlopNeedingLink(port = PORTS.social) {
   const { browser, page } = await connectCDP(port);
   try {
     return await searchSlopEpisodes(page);

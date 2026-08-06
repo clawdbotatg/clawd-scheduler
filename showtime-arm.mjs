@@ -32,6 +32,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const envFile = fs.existsSync(path.join(HERE, '.env')) ? fs.readFileSync(path.join(HERE, '.env'), 'utf8') : '';
 const SLOP_TOKEN = (envFile.match(/^SLOP_TOKEN=(.+)$/m) || [])[1]?.trim();
+// CDP port for the X leg's chrome-ethereum clone. On clawd-heart 9223 is owned
+// by the twitter-reader's chrome-x clone (the WRONG X account — attaching to it
+// is why an X leg finds no Go Live button), so .env pins SLOP_PORT_SOCIAL=9225.
+const PORT_SOCIAL = Number(process.env.SLOP_PORT_SOCIAL || (envFile.match(/^SLOP_PORT_SOCIAL=(.+)$/m) || [])[1] || 9223);
 
 async function fanout(action) { // action: start|stop, both destinations
   if (!SLOP_TOKEN) { log('⚠ no SLOP_TOKEN — cannot control fanouts'); return; }
@@ -47,11 +51,11 @@ function localHM(iso) { // ISO → "3:30 PM" local
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
-function ensureClone() { // the X leg needs the 9223 headless clone
-  try { execSync('curl -s --max-time 3 http://127.0.0.1:9223/json/version', { stdio: 'pipe' }); return true; }
+function ensureClone() { // the X leg needs the chrome-ethereum headless clone
+  try { execSync(`curl -s --max-time 3 http://127.0.0.1:${PORT_SOCIAL}/json/version`, { stdio: 'pipe' }); return true; }
   catch {
-    log('9223 clone down — launching headless');
-    try { execSync(`bash ${HERE}/launch-clone.sh "${HERE}/profiles/chrome-ethereum" 9223 headless chrome`, { stdio: 'pipe', timeout: 60000 }); return true; }
+    log(`${PORT_SOCIAL} clone down — launching headless`);
+    try { execSync(`bash ${HERE}/launch-clone.sh "${HERE}/profiles/chrome-ethereum" ${PORT_SOCIAL} headless chrome`, { stdio: 'pipe', timeout: 60000 }); return true; }
     catch (e) { log(`✗ clone launch failed: ${e.message.slice(0, 120)}`); return false; }
   }
 }
@@ -94,7 +98,7 @@ const fireAt = localHM(next.scheduledStart);
 const legs = [
   run(process.execPath, ['go-live-youtube.mjs', '--id', next.id, '--at', fireAt, '--arm'], {}, 'YT'),
 ];
-if (cloneOk) legs.push(run(process.execPath, ['x-live-watchdog.mjs', '--arm', '--grace', '15'], { X_TITLE: next.title, X_FIRE_AT: fireAt }, 'X'));
+if (cloneOk) legs.push(run(process.execPath, ['x-live-watchdog.mjs', '--arm', '--grace', '15'], { X_TITLE: next.title, X_FIRE_AT: fireAt, SLOP_PORT_SOCIAL: String(PORT_SOCIAL) }, 'X'));
 else log('⚠ X leg skipped (no clone) — YouTube still fires');
 const codes = await Promise.all(legs);
 log(`go-live legs done (exit codes: ${codes.join(',')})`);
@@ -114,7 +118,7 @@ for (;;) {
   if (goneMin >= STOP_AFTER_MIN) {
     log('AUTO-STOP: ending both broadcasts + fanouts');
     await transitionBroadcast(next.id, 'complete').catch((e) => log(`YT end: ${e.message.slice(0, 100)}`));
-    await run('node', ['end-x-livestream.mjs'], { X_TITLE: next.title }, 'X-end');
+    await run('node', ['end-x-livestream.mjs'], { X_TITLE: next.title, SLOP_PORT_SOCIAL: String(PORT_SOCIAL) }, 'X-end');
     break;
   }
 }

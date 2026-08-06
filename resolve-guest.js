@@ -6,6 +6,7 @@
 //   node resolve-guest.js 2            # the 2nd TODO in the queue
 //   node resolve-guest.js "Zak"        # the TODO whose title matches
 import { connectCDP } from './lib/connect.js';
+import { PORTS } from './lib/config.js';
 import { searchSlopEpisodes } from './workflows/find-next-slop.js';
 import { resolveTwitter, deriveOrgSignal } from './lib/resolve-twitter.js';
 import fs from 'node:fs';
@@ -105,5 +106,5 @@ async function main(page) {
   }
 }
 
-const { browser, page } = await connectCDP(9223);
+const { browser, page } = await connectCDP(PORTS.social);
 try { await main(page); } finally { await browser.close(); }
