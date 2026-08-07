@@ -75,12 +75,19 @@ async function main(page) {
   const emailLocal = email ? email.split('@')[0] : null;
   const query = `${guestName} twitter`;
   console.log(`\nresolving "${query}"  | signals: name="${guestName}" org="${org || ''}" email-local="${emailLocal || ''}" (+follows-you)\n`);
-  const { results, best, second, threshold, decision } = await resolveTwitter(page, { query, names: [guestName], orgs: [org], emailLocal, constants: [] });
+  const { results, best, second, dormantSkipped, threshold, decision } = await resolveTwitter(page, { query, names: [guestName], orgs: [org], emailLocal, constants: [] });
 
   console.log(`candidates: ${results.map((r) => '@' + r.handle).join(', ') || '(none)'}`);
   for (const r of results) {
-    const tags = [r.iFollow ? 'I-FOLLOW✓' : '', r.emailExact ? 'email=handle✓' : (r.emailPartial ? 'email~handle' : ''), r.nameMatch ? 'name✓' : '', r.orgMatched.length ? 'org:' + r.orgMatched.join('+') : '', r.manyMutuals ? 'mutuals>20' : '', r.followsYou ? 'follows-me' : ''].filter(Boolean).join(' ');
-    console.log(`  @${r.handle}  score=${r.score}  ${tags}\n     ${r.name} — ${r.bio.replace(/\n/g, ' ').slice(0, 80)}`);
+    const tags = [r.iFollow ? 'I-FOLLOW✓' : '', r.emailExact ? 'email=handle✓' : (r.emailPartial ? 'email~handle' : ''), r.nameMatch ? 'name✓' : '', r.orgMatched.length ? 'org:' + r.orgMatched.join('+') : '', r.manyMutuals ? `mutuals:${r.mutuals}` : '', r.followsYou ? 'follows-me' : '', r.viaSibling ? `sibling-of:@${r.viaSibling}` : '', r.dormant ? 'DORMANT✗' : ''].filter(Boolean).join(' ');
+    const s = r.stats || {};
+    console.log(`  @${r.handle}  score=${r.score}  ${tags}\n     ${r.name} — ${r.bio.replace(/\n/g, ' ').slice(0, 80)}\n     posts=${s.posts ?? '?'} followers=${s.followers ?? '?'} following=${s.following ?? '?'}`);
+  }
+  // The trap that cost the 2026-08-07 episode: a handle carrying the right
+  // name with nobody home behind it. Say it out loud so it can't be skimmed past.
+  for (const d of dormantSkipped) {
+    console.log(`\n!! SKIPPED @${d.handle} — matches on name but looks ABANDONED (posts=${d.stats?.posts ?? '?'}, bio=${d.bio.trim() ? 'yes' : 'empty'}).`);
+    console.log(`   A dormant handle with the right name is NOT the right account. Confirm with Austin before ever using it.`);
   }
 
   const signalsOf = (r) => [r.iFollow ? 'i-follow-them' : '', r.emailExact ? 'email=handle' : '', r.nameMatch ? 'name' : '', ...r.orgMatched, r.manyMutuals ? 'mutuals>20' : '', r.followsYou ? 'follows-me' : ''].filter(Boolean);
@@ -94,6 +101,10 @@ async function main(page) {
   if (decision === 'auto') {
     console.log(`\n==> AUTO-ACCEPT (confident): @${best.handle}  score ${best.score} ≥ ${threshold}  [${signalsOf(best).join(', ')}]`);
     writeCache(best);
+  } else if (decision === 'ask-sibling') {
+    console.log(`\n==> SIBLING CORRECTION — the name-matching handle @${best.viaSibling} looks abandoned; @${best.handle} is the live account next to it.`);
+    console.log(`    @${best.handle}: ${best.stats?.posts ?? '?'} posts, ${best.mutuals} mutuals with you — vs @${best.viaSibling}: ${results.find((r) => r.handle === best.viaSibling)?.stats?.posts ?? '?'} posts.`);
+    console.log(`ASK AUSTIN: "${guestName}'s handle looks like @${best.handle}, not @${best.viaSibling} (that one's abandoned) — confirm?"`);
   } else if (decision === 'ask-ambiguous') {
     console.log(`\n==> AMBIGUOUS — two strong matches.`);
     console.log(`ASK AUSTIN: "Two strong matches for ${guestName} — @${best.handle} (${best.score}) or @${second.handle} (${second.score})?"`);

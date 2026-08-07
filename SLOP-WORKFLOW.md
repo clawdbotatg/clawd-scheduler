@@ -245,6 +245,29 @@ confidence threshold). The numbered list above is the canonical order.
 - If nothing verifies → prints `UNCONFIRMED — STOP and ask Austin` (don't guess).
 - Verified guests are cached in `data/guest-twitter.json` so we never re-derive.
 
+**The dormant-handle trap (2026-08-07 — cost us a live episode).** The ludamad
+episode went out titled `@ludamad`: an account carrying his real name ("Adam
+Domurad"), joined 2009, which even *follows Austin* — but with **0 posts and no
+bio**. The real account is **@ludamad_** (2,207 posts, *Rodent @aztecnetwork*,
+35 mutuals). Austin caught it on-air and corrected it publicly. Three lessons,
+all now enforced in `lib/resolve-twitter.js`:
+1. **Activity is an identity signal.** `stats.posts`/`followers`/`following` are
+   scraped per candidate; a `dormant` one (0 posts, or <5 posts and no bio) can
+   never be auto-accepted or even count as "verified", however well the name matches.
+2. **Google is not enough.** `"Adam Domurad twitter"` returns LinkedIn,
+   ResearchGate and Facebook — **zero x.com links**. X's own people search
+   (`/search?q=…&f=user`) is now a second candidate source, and it returns
+   `@ludamad_` first.
+3. **A handle from outside the search is a seed, not an answer.** This one was
+   inferred from `github.com/ludamad` and hand-written straight into the cache,
+   bypassing every check. Pass such guesses as `seeds:[…]` — they then get the
+   dormancy gate plus a **sibling sweep** (people-search the dormant handle
+   itself, which surfaces the `@name_` variant). A winner found that way returns
+   `ask-sibling` and is **never** auto-accepted — confirm with Austin.
+
+Mutual overlap is graded (`>20` → 3 pts, `>5` → 2, `>0` → 1) and breaks score
+ties: a same-name stranger has 0 mutuals with Austin, the real guest has dozens.
+
 **Resolved + cached:** `port@example.com` → **@port_dev** ("port 🦞",
 *Developer Advocate @monad | merc @buidlguidl*). NOT `@tweetsbyport` (the Port.io
 dev-portal **company** — the decoy that outranks the person on a generic search).

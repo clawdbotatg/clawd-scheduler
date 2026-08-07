@@ -88,6 +88,16 @@ key + relay env update on the EC2 box.
   the user has signed** — a lingering headed window keeps stealing their foreground.
   **While a signature is pending, do NOT drive 9223 for anything else** — connecting
   another automation to that clone can drop the CDP session and disrupt signing.
+- **The guest's X handle comes from `resolve-guest.js` — NEVER hand-write it.** A
+  GitHub username, a website, or a confident guess is a *seed*, not an answer: pass
+  it as `seeds:['name']` so it goes through the dormancy + sibling checks. Two traps
+  the checks exist for: (1) a **DORMANT** handle — right real name, 0 posts, no bio,
+  may even follow Austin — is never the right account; the live one is usually the
+  same handle plus punctuation (`@name_`). (2) Google often returns **zero x.com
+  links** for a person's name, so X's own people search is the authority. If the
+  script says ASK AUSTIN, **ask Austin** — don't write the cache yourself. Cost of
+  relearning: the 2026-08-07 ludamad episode went out titled `@ludamad` (dormant)
+  instead of `@ludamad_`, and Austin had to correct it publicly, mid-show.
 - **Telegram notify is a MANUAL send.** `notify-guest.mjs` copies the welcome message
   + room invite to the clipboard; the USER pastes & sends. NEVER auto-send a private
   link to a guessed Telegram contact (handles ≠ Twitter; misID risk).
