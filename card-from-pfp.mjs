@@ -31,7 +31,11 @@ console.log('\ncard after:', JSON.stringify(done || (await cardOf())));
 // Download the generated card to eyeball.
 const png = await fetch(`${BASE}/v1/cards/${SLUG}/card.png`);
 if (png.ok) {
-  const out = `/tmp/${SLUG}-card.png`;
+  // Canonical card path = lib/config episode().card (`/tmp/<slug>card.png`, no
+  // hyphen) — x-schedule / yt-thumbnail read that name, and 2026-08-13 the
+  // twitter phase ENOENT'd because this script wrote `<slug>-card.png` and only
+  // the (later) publish phase happened to re-download under the right name.
+  const out = `/tmp/${SLUG}card.png`;
   fs.writeFileSync(out, Buffer.from(await png.arrayBuffer()));
   console.log(`saved ${out} (HTTP ${png.status})`);
 } else {

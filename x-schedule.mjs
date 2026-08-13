@@ -38,6 +38,16 @@ const addMinutes = (t, mins) => {
   return `${h12}:${String(mm).padStart(2, '0')} ${ap}`;
 };
 const END_TIME = addMinutes(TIME, DURATION_MIN);
+// X silently rejects a broadcast whose start is already past: the Create click
+// "succeeds", nothing lands in the Scheduled list (2026-08-13, twice). Refuse
+// upfront so the failure is one readable line instead of a 20-minute mystery.
+const tm = TIME.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+const startAt = new Date(`${MON} ${DAY}, ${YEAR} ${((Number(tm[1]) % 12) + (/pm/i.test(tm[3]) ? 12 : 0))}:${tm[2]}`);
+if (startAt.getTime() < Date.now() + 5 * 60_000) {
+  console.error(`✗ start ${DATE} ${TIME} is in the past (or <5 min out) — X will silently drop the create.`);
+  console.error(`  For a show already underway, repurpose an existing scheduled broadcast instead (retitle+poster in the details modal).`);
+  process.exit(1);
+}
 console.log(`X broadcast: ${TITLE}\n  ${MON} ${DAY}, ${YEAR}  ${TIME}–${END_TIME} (${DURATION_MIN}min)  source=${SOURCE} cat=${CATEGORY}\n  poster=${POSTER}  submit=${SUBMIT}`);
 
 const browser = await chromium.connectOverCDP(`http://127.0.0.1:${PORT}`);
@@ -159,7 +169,11 @@ await pg.goto('https://studio.x.com/producer', { waitUntil: 'domcontentloaded' }
 await pg.waitForTimeout(7000);
 const body = (await pg.locator('body').innerText().catch(() => '')) || '';
 const persisted = new RegExp(TITLE.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(body) && body.includes(`${MON} ${Number(DAY)}`);
-console.log(persisted ? `\nSCHEDULED ✅ — ${TITLE} on ${MON} ${DAY} ${TIME}–${END_TIME}` : '\n⚠ could not confirm in Scheduled list — check manually');
+console.log(persisted ? `\nSCHEDULED ✅ — ${TITLE} on ${MON} ${DAY} ${TIME}–${END_TIME}` : '\n✗ NOT in the Scheduled list after create — the broadcast did NOT persist (see /tmp/x-state.png)');
 await pg.screenshot({ path: '/tmp/x-state.png' });
 await park();
 await browser.close();
+// A create that can't be confirmed is a failure, not a warning: on 2026-08-13
+// this printed "check manually", exited 0, and the orchestrator stamped the
+// twitter phase ✓ done — twice — while nothing existed on X.
+if (!persisted) process.exit(3);

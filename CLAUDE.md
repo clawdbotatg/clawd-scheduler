@@ -6,9 +6,24 @@ file is the fast cold-start so a fresh session can execute correctly.
 
 ## When the user says "schedule the next TODO slop computer in my schedule"
 
-Run these in order. The orchestrator is **idempotent** — every scheduling surface
-checks if it's already done and skips, so re-running is always safe (never
-double-books).
+**One command does the whole thing now:**
+
+```bash
+node schedule-next.mjs --plan     # read-only preview (clones + calendar + handle)
+node schedule-next.mjs            # end to end: clones → episode → handle → room →
+                                  # token (auto-written to .env, verified) → all
+                                  # phases through twitter → verification table
+# calendar-less (handle/date/time already known):
+node schedule-next.mjs --handle <h> --date 'Mon DD, YYYY' --time 'H:MM AM'
+```
+
+It exits loudly at the only human gates: an ambiguous guest handle (exit 2 with
+the ASK AUSTIN question), and it deliberately stops before **onchain** (Austin
+signs) and **notify** (Austin sends) — it prints the exact commands for both.
+Idempotent like everything it wraps: re-run freely after fixing anything.
+
+The manual step-by-step it replaces (still valid, e.g. to run one step in
+isolation or debug):
 
 ```bash
 # 0) Bring up the two logged-in browser clones HEADLESS (no focus steal).
