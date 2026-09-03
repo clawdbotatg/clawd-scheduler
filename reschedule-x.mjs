@@ -4,7 +4,7 @@
 // x-schedule.mjs CREATES a broadcast and is idempotent (skips if already scheduled)
 // — so it can NOT move an existing one. This edits the existing broadcast in place.
 //
-//   X_HANDLE=0xzak X_DATE='Jun 26, 2026' X_TIME='10:30 AM' X_DURATION_MIN=60 \
+//   X_HANDLE=0xzak X_DATE='Jun 26, 2026' X_TIME='10:30 AM' X_DURATION_MIN=100 \
 //     node reschedule-x.mjs [--submit]
 // Without --submit: fills + reads back + screenshots, does NOT Save.
 //
@@ -24,7 +24,7 @@ const HANDLE = (process.env.X_HANDLE || '').replace(/^@/, '');
 const DATE = process.env.X_DATE, TIME = process.env.X_TIME;
 if (!HANDLE || !DATE || !TIME) { console.error('set X_HANDLE, X_DATE ("Mon DD, YYYY"), X_TIME ("H:MM AM")'); process.exit(1); }
 const ep = episode(HANDLE);
-const DURATION_MIN = Number(process.env.X_DURATION_MIN || 60);
+const DURATION_MIN = Number(process.env.X_DURATION_MIN || 100); // +30 min slack — X hard-stops at end time
 const SUBMIT = process.argv.includes('--submit');
 
 const dm = DATE.match(/^([A-Za-z]{3})[a-z]*\s+(\d{1,2}),\s+(\d{4})$/);

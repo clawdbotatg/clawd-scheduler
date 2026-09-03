@@ -2,7 +2,7 @@
 // counterpart of fill-yt-schedule.js. Fills the "Create broadcast" form and,
 // with --submit, creates it. Per-episode inputs come from env so the orchestrator
 // can drive it; sensible defaults = adrianleb.
-//   X_HANDLE=adrianleb X_DATE='Jun 15, 2026' X_TIME='9:00 AM' X_DURATION_MIN=70 \
+//   X_HANDLE=adrianleb X_DATE='Jun 15, 2026' X_TIME='9:00 AM' X_DURATION_MIN=100 \
 //     node x-schedule.mjs [--submit]
 //
 // CRITICAL X gotcha: clicking "Create broadcast" creates+persists the broadcast
@@ -22,7 +22,10 @@ const TITLE = process.env.X_TITLE || ep.title;
 const POSTER = process.env.X_POSTER || ep.card;          // /tmp/<slug>card.png
 const SOURCE = process.env.X_SOURCE || 'Slop.Computer(NEW)';   // X media-studio source name — NOT the old 'Slop.Computer'
 const CATEGORY = process.env.X_CATEGORY || 'Technology';
-const DURATION_MIN = Number(process.env.X_DURATION_MIN || 70);
+// Default = 100 min: X hard-stops the broadcast at the end time, and shows often
+// run past the hour — so pad +30 min over the nominal 70. Real teardown is the
+// showtime watcher (stops ~6 min after the OBS feed ends), not this timer.
+const DURATION_MIN = Number(process.env.X_DURATION_MIN || 100);
 const PORT = Number(process.env.SLOP_PORT_SOCIAL || 9223);
 const SUBMIT = process.argv.includes('--submit');
 
