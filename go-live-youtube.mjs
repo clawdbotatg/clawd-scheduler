@@ -51,9 +51,20 @@ if (AT) {
 }
 console.log(`[${stamp()}] firing`);
 
-// 1) bind to the active stream key (idempotent if already bound)
+// 1) bind to the active stream key (idempotent if already bound). A feed that
+// is late (fanout switched on by hand, OBS started at T+2) must NOT kill the
+// leg — 2026-09-09 the old one-shot pick died at T+0 and the show sat in
+// `testing` for 90 min with nobody firing it. Wait up to FEED_WAIT_MIN.
+const FEED_WAIT_MIN = Number(process.env.YT_FEED_WAIT_MIN || 15);
 let stream = await pickStream();
-if (!stream) { console.error('✗ no active stream and multiple keys — cannot pick; is the rig streaming?'); process.exit(1); }
+for (let i = 0; !stream && i < FEED_WAIT_MIN * 6; i++) {
+  if (i === 0) console.log(`[${stamp()}] no active stream key yet — waiting up to ${FEED_WAIT_MIN} min for the feed (is the rig streaming? are the fanouts on?)`);
+  await sleep(10000);
+  const streams = await listStreams().catch(() => []);
+  stream = streams.find((s) => s.status === 'active') || (streams.length === 1 ? streams[0] : null);
+  if (i % 6 === 5) console.log(`[${stamp()}] still no active stream key (${(i + 1) / 6} min)`);
+}
+if (!stream) { console.error(`✗ no active stream after ${FEED_WAIT_MIN} min — nothing is reaching YouTube (fanouts off? rig not streaming?)`); process.exit(1); }
 if (b.boundStreamId !== stream.id) {
   await bindBroadcast(ID, stream.id);
   console.log(`✓ bound to stream ${stream.id}`);

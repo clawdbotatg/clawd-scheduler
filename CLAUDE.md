@@ -74,6 +74,19 @@ SLOP_TOKEN in `.env`. If an episode is RESCHEDULED after arming, delete its
 `.showtime-state/<ytBroadcastId>.armed` marker. Details in SLOP-WORKFLOW.md
 (step 13 warning block + showtime block).
 
+**Fanout law (2026-09-08 @kain + 09-09 @me_jango, both rescued by hand):** a
+relay token is never trusted by NAME. `lib/relay-token.mjs` probes every
+`SLOP_TOKEN*`/`SLOP_AUTOMATION_TOKEN` in `.env` against `GET /admin/fanouts`
+and uses the first that answers 200; every fanout start/stop is read back and
+must show `desired` flipped (retried until confirmed, shouted into room chat
+if not). The watcher renews `SLOP_AUTOMATION_TOKEN` daily via
+`GET /v1/agent-token` (7-day host token → mints its own successor; the chain
+only breaks if the job stops running for a week, then someone must SIWE at
+live.slop.computer/admin). A late feed no longer kills a leg: the YT leg waits
+up to 15 min for an active stream key, the X leg retries a disabled "Go Live"
+for 15 min, and the watch loop re-fires both until T+40. Never reintroduce a
+one-shot `fetch(...).ok` fanout call.
+
 Known open issue: the slop YT fanout shares the channel's "Default stream key"
 with Clawd Conclave's auto-start broadcasts — a scheduled Conclave broadcast
 bound to that key WILL auto-start when a slop episode streams (it happened
