@@ -63,10 +63,10 @@ const tokenOk = async (tok) => {
 // ---- 0. clones ------------------------------------------------------------
 banner('0/6 clones (headless)');
 const SOCIAL = envKey('SLOP_PORT_SOCIAL') || '9223';
-if (PLAN) log(`    would launch chrome-ethereum:${SOCIAL} + canary-concurrence:9224 headless`);
+if (PLAN) log(`    would launch chrome-ethereum:${SOCIAL} headless (YouTube is API-driven — the Canary clone is never launched)`);
 else {
   await run('bash', ['launch-clone.sh', path.join(HERE, 'profiles/chrome-ethereum'), SOCIAL, 'headless', 'chrome']);
-  await run('bash', ['launch-clone.sh', path.join(HERE, 'profiles/canary-concurrence'), '9224', 'headless']);
+  // NO Canary clone: a headless Canary swallows Austin's YouTube link clicks (2026-09-14); YouTube is API-only.
 }
 
 // ---- 1. next TODO episode ---------------------------------------------------
@@ -78,6 +78,10 @@ if (!HANDLE || !DATE || !TIME) {
   if (!ep) die('no upcoming episode has a TODO location — nothing to schedule. (Pass --handle/--date/--time to schedule without a calendar event.)', 0);
   DATE = DATE || ep.date;
   TIME = TIME || (ep.timeRange || '').split('–')[0].trim();
+  // Calendar renders whole hours as "12pm" / "9am"; every downstream parser
+  // (yt-api denverToISO, x-schedule, check-episode) wants "H:MM AM".
+  { const m = TIME.match(/^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?$/i);
+    if (m) TIME = `${m[1]}:${m[2] || '00'} ${m[3].toUpperCase()}M`; }
   log(`    ${ep.title}  →  ${DATE} ${TIME}`);
   if (!DATE || !TIME) die(`could not parse date/time from calendar event ("${ep.date}" / "${ep.timeRange}")`);
 } else banner(`1/6 calendar lookup skipped (—handle/--date/--time given): ${DATE} ${TIME}`);

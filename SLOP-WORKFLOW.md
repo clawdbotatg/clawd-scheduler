@@ -18,7 +18,7 @@ Two browsers in play:
   account, and attaching to it makes every X step silently fail) — Chrome clone,
   `ethereum.org` Google login (calendar) **and** the user's
   X/Twitter session (the profile clone carried BOTH — that's how we read X as the user).
-- **9224** — Canary clone (`profiles/canary-concurrence`), YouTube channel, for the
+- **9224** — RETIRED (2026-09-14): never launch it. A headless Canary shares the bundle id, so Austin's YouTube clicks open in the invisible clone and nothing appears. `launch-clone.sh` refuses Canary without `SLOP_ALLOW_CANARY_CLONE=1`. Was: Canary clone (`profiles/canary-concurrence`), YouTube channel, for the
   broadcast step. Launch headless (no focus steal): `bash launch-clone.sh
   "$PWD/profiles/canary-concurrence" 9224 headless`. (Older docs say 9222 — it's 9224 now.)
 
@@ -498,7 +498,7 @@ the dedicated reschedule scripts, which **edit the existing broadcast in place**
 
 ## Running WITHOUT stealing focus  ✅
 `launch-clone.sh <profile> <port> [headed|headless]`:
-- **headless** (default for prod runs): `--headless=new` — no window exists, so
+- **headless** (default for prod runs): `--headless=new --no-startup-window` — no window exists, so
   nothing can ever grab your keyboard. **Must** spoof a normal Chrome UA
   (`--user-agent=...Chrome/151...`) + `--window-size=1366,900`, else YouTube
   Studio rejects "HeadlessChrome" as an *unsupported browser* and renders a

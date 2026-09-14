@@ -30,9 +30,10 @@ isolation or debug):
 #    Social clone port = SLOP_PORT_SOCIAL from .env (9225 on clawd-heart — 9223
 #    there belongs to the twitter-reader's chrome-x clone, the WRONG X account;
 #    9223 is the default elsewhere) = Chrome (calendar + user's X + wallet).
-#    9224 = Canary (the YouTube channel)
+#    9224 (Canary, YouTube) is RETIRED — see below.
 bash launch-clone.sh "$PWD/profiles/chrome-ethereum"    "${SLOP_PORT_SOCIAL:-9223}" headless chrome
-bash launch-clone.sh "$PWD/profiles/canary-concurrence" 9224 headless
+# NEVER launch the Canary clone (9224): a headless Canary swallows Austin's YouTube
+# link clicks (2026-09-14). YouTube is API-only; launch-clone.sh refuses Canary.
 
 # 1) Find the next episode whose calendar location is still a `TODO` placeholder.
 node workflows/find-next-slop.js          # → {title, date e.g. "Jun 18, 2026", time e.g. "9:30 AM"}

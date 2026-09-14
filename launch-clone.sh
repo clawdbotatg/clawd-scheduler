@@ -10,6 +10,17 @@ PROFILE="${1:?profile dir}"; PORT="${2:?port}"; MODE="${3:-headed}"
 APP="Google Chrome Canary"; [ "${4:-canary}" = "chrome" ] && APP="Google Chrome"
 BIN="/Applications/$APP.app/Contents/MacOS/$APP"
 
+# HARD RULE (Austin, 2026-09-14): NEVER launch a Canary clone. A headless Canary
+# shares Canary's bundle id, so when Austin clicks a YouTube link macOS hands
+# the URL to the invisible headless instance and NOTHING opens. YouTube is
+# driven by the Data API now (schedule-youtube-api.mjs / lib/yt-api.mjs); the
+# 9224 clone has no remaining job. Refuse unless someone deliberately opts in.
+if [ "$APP" = "Google Chrome Canary" ] && [ "${SLOP_ALLOW_CANARY_CLONE:-}" != "1" ]; then
+  echo "✗ refusing to launch a Canary clone ($PROFILE): a headless Canary swallows Austin's YouTube link clicks." >&2
+  echo "  YouTube is API-driven; nothing needs this clone. Set SLOP_ALLOW_CANARY_CLONE=1 only for a one-off, and kill it right after." >&2
+  exit 3
+fi
+
 lsof -ti:"$PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
 sleep 2
 
@@ -17,7 +28,7 @@ if [ "$MODE" = "headless" ]; then
   # Spoof a normal Chrome UA + desktop window — else YouTube Studio rejects
   # "HeadlessChrome" as an unsupported browser.
   UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
-  nohup "$BIN" --headless=new --user-agent="$UA" --window-size=1366,900 \
+  nohup "$BIN" --headless=new --no-startup-window --user-agent="$UA" --window-size=1366,900 \
     --user-data-dir="$PROFILE" --remote-debugging-port="$PORT" \
     --no-first-run --no-default-browser-check >"/tmp/clone-$PORT.log" 2>&1 &
 else
