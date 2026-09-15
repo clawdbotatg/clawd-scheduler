@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>slop signer</title>
+<style>
+  :root { --bg:#0b0b10; --panel:#12121a; --line:rgba(255,62,201,.22); --text:#e8e8f0; --muted:#8a8aa0; --magenta:#ff3ec9; --lime:#b8ff3e; --amber:#ffb03e; --red:#ff5a5a; }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; padding:20px 16px 60px; }
+  h1 { font-size:18px; margin:0 0 4px; color:var(--magenta); letter-spacing:.04em }
+  .sub { color:var(--muted); font-size:12px; margin-bottom:18px }
+  .bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:18px }
+  .bar .grow { flex:1; min-width:180px }
+  button { font:inherit; background:transparent; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:8px 14px; cursor:pointer }
+  button.primary { background:var(--magenta); color:#000; border-color:var(--magenta); font-weight:700 }
+  button.sign { background:var(--lime); color:#000; border-color:var(--lime); font-weight:700; padding:12px 22px; font-size:15px }
+  button:disabled { opacity:.35; cursor:not-allowed }
+  .pill { display:inline-block; padding:2px 8px; border-radius:99px; font-size:11px; border:1px solid var(--line); color:var(--muted) }
+  .pill.ok { color:var(--lime); border-color:var(--lime) } .pill.warn { color:var(--amber); border-color:var(--amber) } .pill.bad { color:var(--red); border-color:var(--red) }
+  .item { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin-bottom:12px }
+  .item.confirmed { border-color:rgba(184,255,62,.35) } .item.failed { border-color:rgba(255,90,90,.5) } .item.dismissed { opacity:.4 }
+  .item .head { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; margin-bottom:8px }
+  .item .label { font-size:15px; flex:1; min-width:200px }
+  .kv { display:grid; grid-template-columns:max-content 1fr; gap:3px 14px; color:var(--muted); font-size:12px; margin:8px 0 }
+  .kv b { color:var(--text); font-weight:500 }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px }
+  .msg { color:var(--amber); font-size:12px } .err { color:var(--red); font-size:12px; white-space:pre-wrap }
+  details { font-size:11px; color:var(--muted) } details code { word-break:break-all }
+  a { color:var(--magenta) }
+  .empty { color:var(--muted); padding:30px 0; text-align:center }
+  .picker { display:flex; gap:8px; flex-wrap:wrap }
+</style>
+</head>
+<body>
+<h1>◉ slop signer</h1>
+<div class="sub">local page · connect the <b>slop.atg.eth</b> wallet · sign what's queued · done. Claude fills the queue; this page refreshes itself.</div>
+
+<div class="bar">
+  <div class="grow" id="wallet">not connected</div>
+  <span class="pill" id="chain">chain ?</span>
+  <span class="pill" id="net">registry …</span>
+  <div class="picker" id="picker"></div>
+  <button class="primary" id="connect">connect wallet</button>
+</div>
+
+<div id="list"><div class="empty">loading queue…</div></div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const state = { providers: [], provider: null, account: null, chainId: null, meta: null, items: [], busy: {} };
+  const short = (a) => a ? a.slice(0, 6) + '…' + a.slice(-4) : '';
+  const isOwner = () => state.account && state.meta?.owner && state.account.toLowerCase() === state.meta.owner.toLowerCase();
+
+  // ---- wallet discovery (EIP-6963, prefer Rainbow; fall back to window.ethereum)
+  window.addEventListener('eip6963:announceProvider', (e) => {
+    if (!state.providers.some((p) => p.info.uuid === e.detail.info.uuid)) { state.providers.push(e.detail); renderPicker(); }
+  });
+  window.dispatchEvent(new Event('eip6963:requestProvider'));
+  function pickDefault() {
+    const rb = state.providers.find((p) => /rainbow/i.test(p.info.rdns + p.info.name));
+    if (rb) return rb.provider;
+    if (state.providers.length === 1) return state.providers[0].provider;
+    return window.ethereum || null;
+  }
+  function renderPicker() {
+    const el = $('#picker'); el.innerHTML = '';
+    if (state.providers.length < 2 || state.account) return;
+    for (const p of state.providers) { const b = document.createElement('button'); b.textContent = p.info.name; b.onclick = () => connect(p.provider); el.appendChild(b); }
+  }
+  async function connect(provider) {
+    provider = provider || pickDefault();
+    if (!provider) return setWallet('no wallet found — is Rainbow installed in this browser?', 'bad');
+    try {
+      state.provider = provider;
+      const accts = await provider.request({ method: 'eth_requestAccounts' });
+      state.account = accts[0];
+      state.chainId = await provider.request({ method: 'eth_chainId' });
+      provider.on?.('accountsChanged', (a) => { state.account = a[0] || null; render(); });
+      provider.on?.('chainChanged', (c) => { state.chainId = c; render(); });
+      await ensureChain();
+    } catch (e) { setWallet('connect failed: ' + (e.message || e), 'bad'); }
+    render();
+  }
+  async function ensureChain() {
+    const want = '0x' + (state.meta?.chainId || 1).toString(16);
+    if (state.chainId === want) return;
+    try { await state.provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: want }] }); state.chainId = want; }
+    catch (e) { /* user declined — sign stays disabled until they switch */ }
+  }
+  function setWallet(text, cls) { $('#wallet').innerHTML = text; $('#wallet').className = 'grow ' + (cls || ''); }
+  $('#connect').onclick = () => connect();
+
+  // ---- queue
+  async function load(force) {
+    try {
+      const r = await fetch('/api/queue' + (force ? '?force=1' : ''), { cache: 'no-store' });
+      const j = await r.json(); state.meta = j; state.items = j.items || [];
+      $('#net').textContent = 'registry ' + short(j.registry) + ' · owner ' + (j.ownerEns || short(j.owner));
+      $('#net').className = 'pill ok';
+    } catch (e) { $('#net').textContent = 'server unreachable'; $('#net').className = 'pill bad'; }
+    render();
+  }
+  async function sign(it) {
+    if (state.busy[it.id]) return; state.busy[it.id] = true; it._err = ''; render();
+    try {
+      await ensureChain();
+      const want = '0x' + (state.meta.chainId || 1).toString(16);
+      if (state.chainId !== want) throw new Error('switch the wallet to Ethereum mainnet first');
+      const txHash = await state.provider.request({ method: 'eth_sendTransaction', params: [{ from: state.account, to: it.to, data: it.data, value: '0x0' }] });
+      await fetch(`/api/items/${it.id}/sent`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ txHash, from: state.account }) });
+      await load(true);
+    } catch (e) { it._err = e.message || String(e); }
+    state.busy[it.id] = false; render();
+  }
+  const post = (it, action) => fetch(`/api/items/${it.id}/${action}`, { method: 'POST' }).then(() => load(true));
+
+  function render() {
+    // wallet bar
+    if (state.account) {
+      const own = isOwner();
+      setWallet(`connected <b>${short(state.account)}</b> ${own ? '<span class="pill ok">slop.atg.eth ✓</span>' : '<span class="pill bad">NOT the registry owner — switch to slop.atg.eth</span>'}`);
+      $('#connect').style.display = 'none';
+    } else { $('#connect').style.display = ''; }
+    const want = '0x' + (state.meta?.chainId || 1).toString(16);
+    const ch = $('#chain'); ch.textContent = state.chainId ? (state.chainId === want ? 'mainnet' : 'chain ' + parseInt(state.chainId, 16) + ' ✗') : 'chain ?';
+    ch.className = 'pill ' + (state.chainId ? (state.chainId === want ? 'ok' : 'bad') : '');
+    renderPicker();
+
+    // items
+    const order = { pending: 0, sent: 1, failed: 2, confirmed: 3, dismissed: 4 };
+    const items = [...state.items].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || a.createdAt - b.createdAt);
+    const list = $('#list'); list.innerHTML = '';
+    const open = items.filter((i) => i.status === 'pending' || i.status === 'sent');
+    if (!items.length) { list.innerHTML = '<div class="empty">nothing queued — nothing to sign.</div>'; return; }
+    if (!open.length) { const d = document.createElement('div'); d.className = 'empty'; d.textContent = 'all signed — nothing pending.'; list.appendChild(d); }
+    const canSign = state.account && isOwner() && state.chainId === want;
+    for (const it of items) {
+      const d = document.createElement('div'); d.className = 'item ' + it.status;
+      const utc = new Date(it.unix * 1000).toISOString().replace('.000Z', 'Z');
+      const status = { pending: '<span class="pill warn">needs signature</span>', sent: '<span class="pill warn">sent · waiting for the block…</span>', confirmed: '<span class="pill ok">on-chain ✓</span>', failed: '<span class="pill bad">tx failed</span>', dismissed: '<span class="pill">dismissed</span>' }[it.status] || it.status;
+      d.innerHTML = `
+        <div class="head"><span class="label">${it.op === 'delete' ? '🗑 ' : '📅 '}${esc(it.label || it.slug)}</span>${status}</div>
+        <div class="kv">
+          <span>slug</span><b>${esc(it.slug)}</b>
+          ${it.liveSlug && it.liveSlug !== it.slug ? `<span>live room</span><b>${esc(it.liveSlug)}</b>` : ''}
+          <span>when</span><b>${esc(fmt(it.unix))}</b>
+          <span>utc</span><b>${utc} · ${it.unix}</b>
+          <span>call</span><b>${it.op === 'delete' ? 'deleteEpisode(id)' : 'addEpisode(name, slug, liveSlug, "", 0x0, datetime)'}</b>
+          ${it.txHash ? `<span>tx</span><b><a target="_blank" rel="noopener" href="https://etherscan.io/tx/${it.txHash}">${it.txHash.slice(0, 18)}…</a>${it.block ? ' · block ' + it.block : ''}</b>` : ''}
+        </div>
+        ${it.conflict ? `<div class="msg">⚠ ${esc(it.conflict)}</div>` : ''}
+        ${it._err ? `<div class="err">✗ ${esc(it._err)}</div>` : ''}
+        ${it.lastError ? `<div class="err">rpc: ${esc(it.lastError)}</div>` : ''}
+        <details><summary>calldata → ${short(it.to)}</summary><code>${it.data}</code></details>
+        <div class="row"></div>`;
+      const row = d.querySelector('.row');
+      if (it.status === 'pending' || it.status === 'failed') {
+        const b = document.createElement('button'); b.className = 'sign'; b.textContent = state.busy[it.id] ? 'waiting for wallet…' : (it.op === 'delete' ? 'SIGN delete' : 'SIGN schedule');
+        b.disabled = !canSign || !!it.conflict || !!state.busy[it.id];
+        b.title = !state.account ? 'connect the wallet first' : !isOwner() ? 'wrong account' : it.conflict ? 'sign the delete first' : '';
+        b.onclick = () => sign(it); row.appendChild(b);
+        if (it.status === 'failed') { const r = document.createElement('button'); r.textContent = 'reset'; r.onclick = () => post(it, 'reset'); row.appendChild(r); }
+      }
+      if (it.status === 'confirmed' || it.status === 'failed') { const x = document.createElement('button'); x.textContent = 'dismiss'; x.onclick = () => post(it, 'dismiss'); row.appendChild(x); }
+      if (it.status === 'sent') { const x = document.createElement('button'); x.textContent = 'not sent after all — reset'; x.onclick = () => post(it, 'reset'); row.appendChild(x); }
+      list.appendChild(d);
+    }
+  }
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fmt = (unix) => new Date(unix * 1000).toLocaleString('en-US', { timeZone: 'America/Denver', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+
+  load(true);
+  setInterval(() => load(false), 4000);
+  window.__slopSigner = state; // for the headless probe
+})();
+</script>
+</body>
+</html>

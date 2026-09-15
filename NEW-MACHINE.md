@@ -35,12 +35,14 @@ The go-live automation must run on exactly one box or both will fire go-live.
 On the NEW machine:
 ```bash
 bash showtime-install.sh     # com.clawd.slop-showtime (auto go-live + auto-stop)
+bash signer-install.sh       # com.clawd.slop-signer (the on-chain signer page, http://127.0.0.1:8790/ — on the box Austin's browser runs on)
 bash keep-warm-install.sh    # com.clawd.keepwarm (X-only session warmer, every 4h)
 ```
 
 On the OLD machine (immediately after):
 ```bash
 launchctl bootout gui/$(id -u)/com.clawd.slop-showtime
+launchctl bootout gui/$(id -u)/com.clawd.slop-signer
 launchctl bootout gui/$(id -u)/com.clawd.keepwarm
 rm ~/Library/LaunchAgents/com.clawd.slop-showtime.plist \
    ~/Library/LaunchAgents/com.clawd.keepwarm.plist

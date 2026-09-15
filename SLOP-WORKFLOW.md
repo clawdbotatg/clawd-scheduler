@@ -435,6 +435,34 @@ Note: tested **headed** (the user wanted to watch). For unattended runs launch
 spoof should satisfy X Studio like it does YouTube, but verify.
 
 ## Detail — step 14: register on-chain (slop.computer)  ✅  · LAST · user signs
+
+> **2026-09-15 — the signer page replaces the admin-form dance.** Austin asked for
+> "a page I go to, connect my wallet, hit sign, done." That is
+> **`http://127.0.0.1:8790/`** (`signer-server.mjs`, KeepAlive launchd job
+> `com.clawd.slop-signer`, install with `bash signer-install.sh`). Flow:
+>
+> 1. Claude queues the tx: `node signer-add.mjs --slug <slug> --datetime YYYY-MM-DDTHH:MM [--liveslug <room>]`
+>    (`schedule-next.mjs` does this automatically at the end of a run; Denver
+>    wall clock, DST-correct). Reschedule = `--reschedule <slug> --datetime …`
+>    (queues the delete + re-add pair, two signatures, exactly like the admin
+>    page). `--list` shows the queue, `--remove <id>` drops an item,
+>    `--open` foregrounds the page in Austin's browser through the bridge.
+> 2. Austin opens the page (or it's brought up), **connect wallet** → Rainbow as
+>    slop.atg.eth → **SIGN**. The page sends `addEpisode(name, slug, liveSlug,
+>    "", 0x0, unix)` to the registry `0xf3ce3614fe8cd4294a0bf05d10cfda9d9cbc4886`
+>    on mainnet — byte-identical to the admin form's call (verified against
+>    `cast calldata`). It refuses any account but the registry owner, switches
+>    the wallet to mainnet, and keeps a re-add disabled until its delete lands.
+> 3. The server watches the receipt and the registry (`slugToId` /
+>    `getEpisodeBySlug`), flips the item to **on-chain ✓**, and `check-episode`
+>    goes green. A tab left open refreshes itself every 4 s, so the next
+>    episode just appears there.
+>
+> Nothing in the repo signs; the queue (`.signer-queue.json`) holds only public
+> calldata. Probe: `node signer-probe.mjs` (headless Chrome + fake EIP-6963
+> wallet, isolated port/queue). Everything below this box is the legacy
+> admin-form path — still valid as a fallback.
+
 `schedule-onchain.mjs` runs on the **9223 clone** (Chrome with **austingriffith.eth
 wallet connected**). Env: `X_HANDLE ONCHAIN_DATE ONCHAIN_TIME`; `--submit` to act.
 **This is the ONE step that must run against a HEADED 9223** — the user signs the

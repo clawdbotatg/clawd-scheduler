@@ -22,3 +22,8 @@ test-resolve-*.mjs
 # Deps
 node_modules/
 .showtime-state/
+
+# slop signer page runtime state
+.signer-queue.json
+.signer-queue.json.tmp
+.signer.pid

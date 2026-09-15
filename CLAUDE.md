@@ -18,7 +18,8 @@ node schedule-next.mjs --handle <h> --date 'Mon DD, YYYY' --time 'H:MM AM'
 ```
 
 It exits loudly at the only human gates: an ambiguous guest handle (exit 2 with
-the ASK AUSTIN question), and it deliberately stops before **onchain** (Austin
+the ASK AUSTIN question), and it deliberately stops before **onchain** (it queues
+the tx on the signer page, http://127.0.0.1:8790/ — Austin connects Rainbow and
 signs) and **notify** (Austin sends) — it prints the exact commands for both.
 Idempotent like everything it wraps: re-run freely after fixing anything.
 
@@ -98,25 +99,33 @@ key + relay env update on the EC2 box.
 
 - **Idempotent / no duplicates.** Every scheduling surface skips if already done
   (calendar link present · YouTube Upcoming · X Producer · slop.computer/). Re-run freely.
-- **Headless only — EXCEPT the on-chain step.** Driving a headed clone steals the
-  user's keyboard focus the moment it navigates, so launch clones `headless` (UA-spoof
-  is baked in) for every phase *except* `onchain`. The on-chain step needs a **visible**
-  9223 because the user must SEE and SIGN the wallet popup — a headless window has no
-  popup to approve and the tx just hangs. So before `onchain`, relaunch 9223 headed:
-  `bash launch-clone.sh "$PWD/profiles/chrome-ethereum" 9223 headed chrome` — then put
-  it **back to headless the instant they've signed**. Principle: stay headless by
-  default; go headed ONLY for the exact moment the user must sign (or you need them to
-  debug/see something), then revert. A lingering headed window keeps stealing focus.
+- **Headless only.** Driving a headed clone steals the user's keyboard focus the
+  moment it navigates, so launch clones `headless` (UA-spoof is baked in) for every
+  phase. The old "go headed for the on-chain step" dance is DEAD — on-chain now goes
+  through the local **signer page** (next rule), which needs no clone at all.
 - **The relay token is PER-ROOM and SECRET.** Get each room's token via `copy-skill.js`.
   It lives only in the gitignored `.env` (`SLOP_TOKEN`) — never hardcode/commit it.
-- **On-chain = the USER signs the wallet tx.** `schedule-onchain.mjs` fills the date
-  and clicks SCHEDULE EPISODE to *bring up* the tx; it NEVER signs and never touches
-  the wallet password. It has a guard that refuses to click unless the datetime reads
-  back exactly right (it once fired an empty-time tx — never again). Run it against a
-  **headed** 9223 (see "Headless only" above), then **relaunch 9223 headless the moment
-  the user has signed** — a lingering headed window keeps stealing their foreground.
-  **While a signature is pending, do NOT drive 9223 for anything else** — connecting
-  another automation to that clone can drop the CDP session and disrupt signing.
+- **On-chain = the USER signs, on the SIGNER PAGE.** `http://127.0.0.1:8790/`
+  (`signer-server.mjs`, launchd `com.clawd.slop-signer`, `bash signer-install.sh`)
+  is a local page Austin opens once, connects Rainbow (slop.atg.eth) and hits
+  SIGN. It shows exactly what the admin's SCHEDULE form would send —
+  `addEpisode(name, slug, liveSlug, "", 0x0, unixSeconds)` on the mainnet
+  registry `0xf3ce…4886` — and polls the queue, so a tab left open updates
+  itself. Claude only ever edits the queue: `node signer-add.mjs --slug <s>
+  --datetime YYYY-MM-DDTHH:MM [--liveslug <room>]` (`schedule-next.mjs` does it
+  at the end of every run); `--reschedule <slug> --datetime …` queues the
+  delete + re-add pair the admin page would do; `--list` / `--remove <id>`;
+  `--open` foregrounds the page in Austin's browser via the bridge (the ONE
+  sanctioned bring-it-up). Idempotent: an episode already on-chain at that time
+  queues nothing; a pending item for the same slug is replaced, never
+  duplicated; the page refuses to sign from any account but the registry
+  owner and disables a re-add until its delete has landed. Nothing in this
+  repo signs or touches a wallet password — the wallet does, in his browser.
+  `lib/slop-registry.mjs` is the dependency-free codec (cross-checked against
+  `cast calldata` by `node signer-probe.mjs`, the headless fake-wallet probe —
+  run it after touching any signer file). `onchain-fill.mjs` /
+  `schedule-onchain.mjs` (fill the admin form in his real tab) are the legacy
+  fallback only.
 - **The guest's X handle comes from `resolve-guest.js` — NEVER hand-write it.** A
   GitHub username, a website, or a confident guess is a *seed*, not an answer: pass
   it as `seeds:['name']` so it goes through the dormancy + sibling checks. Two traps
@@ -185,7 +194,7 @@ So:
 `workflows/find-next-slop.js` · `resolve-guest.js` · `find-room.js`/`create-room.js` ·
 `copy-skill.js` · `kick-research.mjs` · `get-pfp.js` · `card-from-pfp.mjs` ·
 `publish-card.mjs` · `update-calendar-event.mjs` · `fill-yt-schedule.js` ·
-`x-schedule.mjs` · `schedule-onchain.mjs` · `notify-guest.mjs` · `check-episode.mjs` ·
+`x-schedule.mjs` · `signer-add.mjs`/`signer-server.mjs` (on-chain via the signer page; `schedule-onchain.mjs` is legacy) · `notify-guest.mjs` · `check-episode.mjs` ·
 orchestrated by **`slop-episode.mjs`**. Config + per-episode derivation: `lib/config.js`.
 
 Full per-step detail, selectors, and the hard-won UI gotchas are in **`SLOP-WORKFLOW.md`**.

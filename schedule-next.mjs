@@ -145,14 +145,23 @@ const stoppedAtOnchain = /STOP at "onchain"/.test(r5.out);
 if (r5.code !== 0 && !stoppedAtOnchain) die(`slop-episode failed before the onchain gate (exit ${r5.code}) — read its output above; fix and re-run (idempotent).`);
 
 // ---- 6. verify + remaining human steps --------------------------------------
-banner('6/6 verification');
+banner("6/7 verification");
 await node(['check-episode.mjs'], { CHK_HANDLE: HANDLE, CHK_DATE: DATE });
+// ---- 7. on-chain → the signer page (Austin connects Rainbow + signs) ----------
+banner('7/7 on-chain → signer page');
+const dtLocal = (() => { // 'Sep 16, 2026' + '5:00 PM' → '2026-09-16T17:00' (Denver wall clock)
+  const M = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  const d = DATE.match(/^([A-Za-z]{3})[a-z]*\.? (\d{1,2}),? (\d{4})$/), t = TIME.match(/^(\d{1,2}):(\d{2}) ([AP])M$/i);
+  if (!d || !t) return null;
+  let h = Number(t[1]) % 12; if (/p/i.test(t[3])) h += 12;
+  return `${d[3]}-${String(M[d[1].toLowerCase()]).padStart(2, '0')}-${d[2].padStart(2, '0')}T${String(h).padStart(2, '0')}:${t[2]}`;
+})();
+if (dtLocal) await node(['signer-add.mjs', '--slug', ep.slug, '--datetime', dtLocal]);
+else log(`    (could not derive a local datetime from "${DATE} ${TIME}" — queue by hand: node signer-add.mjs --slug ${ep.slug} --datetime YYYY-MM-DDTHH:MM)`);
 log(`
 ━━━ automated surfaces done. Two human steps remain:
-  1) ON-CHAIN (Austin signs):
-       bash launch-clone.sh "$PWD/profiles/chrome-ethereum" ${SOCIAL} headed chrome
-       node slop-episode.mjs --handle ${HANDLE} --token ${token.slice(0, 6)}… --date '${DATE}' --time '${TIME}' --invite '${inviteArg}' --go --only onchain --submit-onchain
-       # then IMMEDIATELY relaunch ${SOCIAL} headless
+  1) ON-CHAIN (Austin signs): open http://127.0.0.1:${process.env.SIGNER_PORT || 8790}/ → connect Rainbow (slop.atg.eth) → SIGN.
+       bring it up for him:  node signer-add.mjs --open        (status: node signer-add.mjs --list)
   2) NOTIFY guest (Austin sends):
-       node notify-guest.mjs ${HANDLE}
+       node notify-guest.mjs --handle ${HANDLE} --invite '${inviteArg}'
 `);
