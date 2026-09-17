@@ -73,7 +73,12 @@ never trust it), then auto-stops everything ~6 min after the OBS feed ends.
 Austin's only showtime job: start/stop OBS. What scheduling must leave behind
 for it: the YT broadcast + X livestream (same title/time) and the room's
 SLOP_TOKEN in `.env`. If an episode is RESCHEDULED after arming, delete its
-`.showtime-state/<ytBroadcastId>.armed` marker. Details in SLOP-WORKFLOW.md
+`.showtime-state/<ytBroadcastId>.armed` marker and kill the running
+`showtime-arm.mjs` if it is still in the old arm loop (a show that never went
+live now stands down by itself at T+90 — fanouts off, marker cleared — but
+before that it is still waiting on the OLD time). Rescheduling recipe (moved
+episode, X `TIMED OUT`, casing trap): SLOP-WORKFLOW.md "Rescheduling a MOVED
+episode". Details in SLOP-WORKFLOW.md
 (step 13 warning block + showtime block).
 
 **Fanout law (2026-09-08 @kain + 09-09 @me_jango, both rescued by hand):** a

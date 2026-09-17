@@ -492,15 +492,26 @@ the dedicated reschedule scripts, which **edit the existing broadcast in place**
    workflows/find-next-slop.js` lists every upcoming episode's *current* date/time.
    (This is the bug that bit us: an episode was scheduled off a stale scan, then the
    guest moved it — always confirm the live calendar time right before scheduling.)
-2. **YouTube:** `YT_HANDLE=0xzak YT_DATE='Jun 26, 2026' YT_TIME='10:30 AM' node
-   reschedule-youtube.mjs [--submit] [--set-thumb]`. Finds the broadcast by `@handle`
-   in the Upcoming list → opens `/video/<id>/edit` → sets date+time (same controls as
-   the create wizard) → Save. `--set-thumb` (re)uploads the episode card (use this to
-   fix a broadcast that got scheduled without its card). Without `--submit` it's a dry
-   run (fills + reads back + guards, no Save).
+2. **YouTube (API, no browser):** `YT_HANDLE=0xzak YT_DATE='Jun 26, 2026'
+   YT_TIME='10:30 AM' node reschedule-youtube-api.mjs [--submit]`. Finds the
+   broadcast by `@handle` in the Upcoming list and PUTs the new
+   `scheduledStartTime` through the Data API (title/description re-sent
+   verbatim, read back and compared). The old `reschedule-youtube.mjs` drove the
+   BANNED 9224 Canary clone — don't. **Then delete
+   `.showtime-state/<ytId>.armed`** if the watcher had already armed the old time
+   (it also clears itself once it stands down at T+90, see the showtime block).
 3. **X/Twitter:** `X_HANDLE=0xzak X_DATE='Jun 26, 2026' X_TIME='10:30 AM'
    X_DURATION_MIN=100 node reschedule-x.mjs [--submit]`. Finds the broadcast by
    `@handle` → opens `/producer/broadcasts/<id>` → sets start, then end → Save.
+   **If the old start has already PASSED, X marks the broadcast `TIMED OUT` and
+   locks every field** (reschedule-x dies on a disabled datetime button). Then
+   create a fresh one with `x-schedule.mjs --submit` for the new date (its
+   idempotency check is handle+date, so the timed-out row doesn't block it) and
+   **pass the handle in the SAME casing as the YouTube title** (`ASvanevik`, not
+   `asvanevik`): `x-live-watchdog.mjs` / `end-x-livestream.mjs` find the X
+   livestream by exact YouTube title, case-sensitive. A wrong-case title must be
+   fixed in the Producer edit modal (name field → Save; never Cancel/Escape).
+   The timed-out row can stay; it doesn't appear in Live Studio.
 4. **On-chain:** the on-chain step is fine to (re)run — `schedule-onchain.mjs` is
    idempotent (skips if the slug already shows on `slop.computer/`). If the wrong
    time was already filled but NOT signed, just relaunch the clone (an unsigned wallet

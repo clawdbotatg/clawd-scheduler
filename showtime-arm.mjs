@@ -37,6 +37,7 @@ fs.mkdirSync(STATE, { recursive: true });
 const LEAD_MIN = Number(process.env.SHOWTIME_LEAD_MIN || 5);
 const STOP_AFTER_MIN = Number(process.env.SHOWTIME_STOP_AFTER_MIN || 6);
 const RETRY_MIN = Number(process.env.SHOWTIME_RETRY_MIN || 40); // keep re-firing go-live until T+this
+const GIVE_UP_MIN = Number(process.env.SHOWTIME_GIVE_UP_MIN || 90); // never live by T+this → stand down
 const stamp = () => new Date().toLocaleTimeString();
 const log = (...a) => console.log(`[${stamp()}]`, ...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -195,6 +196,18 @@ for (;;) {
   if (!b || b.lifeCycleStatus === 'complete') { log('YT broadcast complete — teardown'); break; }
   if (b.lifeCycleStatus !== 'live') {
     log(`YT broadcast state=${b.lifeCycleStatus} — waiting`);
+    // A show that never went live (pushed back, cancelled) must not keep this
+    // loop — and the fanouts — spinning forever: 09-16 asvanevik was moved a
+    // day and the watcher sat here 15 h with both fanouts desired=on (900+
+    // relay reconnects). Stand down and clear the marker so a rescheduled
+    // broadcast (same YT id, new time) simply re-arms at its new T-LEAD.
+    if (Date.now() > next.t + GIVE_UP_MIN * 60_000) {
+      log(`never went live by T+${GIVE_UP_MIN} — standing down (fanouts off, marker cleared)`);
+      const off = await fanout('stop', { deadlineMs: Date.now() + 3 * 60_000 });
+      await say(`😴 showtime: "${next.title}" never went live by T+${GIVE_UP_MIN} min — standing down, fanouts ${off ? 'off (relay confirmed)' : 'NOT confirmed off — switch them off by hand at live.slop.computer/admin'}. If the show was pushed back, reschedule the YouTube broadcast and I re-arm at the new time.`);
+      fs.rmSync(marker, { force: true });
+      process.exit(0);
+    }
     if (Date.now() < next.t + RETRY_MIN * 60_000) {
       if (!fanoutsOn) fanoutsOn = await fanout('start');
       const active = (await listStreams().catch(() => [])).some((s) => s.status === 'active');
