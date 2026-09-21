@@ -21,9 +21,13 @@ const { src, name } = await page.evaluate((h) => {
     }
     return null;
   };
-  const src =
-    pick(document.querySelector(`a[href="/${h}/photo"]`)) ||
-    pick(document.querySelector(`[data-testid="UserAvatar-Container-${h}"]`));
+  // Case-insensitive: X renders the handle in its canonical casing
+  // (/DawsonBotsford/photo) even when the page was opened as /dawsonbotsford.
+  const lc = h.toLowerCase();
+  const byHref = [...document.querySelectorAll('a[href]')].find((a) => a.getAttribute('href').toLowerCase() === `/${lc}/photo`);
+  const byTestid = [...document.querySelectorAll('[data-testid^="UserAvatar-Container-"]')]
+    .find((e) => e.getAttribute('data-testid').toLowerCase() === `useravatar-container-${lc}`);
+  const src = pick(byHref) || pick(byTestid);
   const name = document.querySelector('[data-testid="UserName"]')?.innerText.replace(/\n/g, ' ').trim() || '';
   return { src, name };
 }, handle);
