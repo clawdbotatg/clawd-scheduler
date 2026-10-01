@@ -4,9 +4,9 @@
 //
 // Scan: the YouTube API's upcoming broadcasts are the schedule of record (the
 // scheduling pipeline always creates YT + X together with the same title/time).
-// When one starts within LEAD_MIN, this process stays alive and runs the whole
+// When one starts within ARM_WINDOW_MIN (LEAD + one poll), this process stays alive and runs the whole
 // showtime sequence:
-//   T-10m  switch on relay fanouts (they self-heal-loop until OBS pushes)
+//   ≤T-5m  switch on relay fanouts (they self-heal-loop until OBS pushes)
 //   T      go-live-youtube.mjs  (bind active key → transition live)
 //   T+15s  x-live-watchdog.mjs  (press Go Live if X's own trigger didn't)
 //   after  watch the feed; gone > STOP_AFTER_MIN while live → end YT + X,
@@ -35,6 +35,14 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STATE = path.join(HERE, '.showtime-state');
 fs.mkdirSync(STATE, { recursive: true });
 const LEAD_MIN = Number(process.env.SHOWTIME_LEAD_MIN || 5);
+// launchd runs us every StartInterval (300s, showtime-install.sh). The arm
+// WINDOW must be LEAD + one poll, or the first tick inside it can land as late
+// as T-0 — while the T-30 chat line already promised ⚡ARMED by T-LEAD and told
+// Austin to go manual if it didn't land (2026-10-01 @seanwbren: ticks fell at
+// T-6:13 and T-1:08, he started everything by hand). LEAD is the promise;
+// the window is how we keep it.
+const POLL_MIN = Number(process.env.SHOWTIME_POLL_MIN || 5);
+const ARM_WINDOW_MIN = LEAD_MIN + POLL_MIN;
 const STOP_AFTER_MIN = Number(process.env.SHOWTIME_STOP_AFTER_MIN || 6);
 const RETRY_MIN = Number(process.env.SHOWTIME_RETRY_MIN || 40); // keep re-firing go-live until T+this
 const GIVE_UP_MIN = Number(process.env.SHOWTIME_GIVE_UP_MIN || 90); // never live by T+this → stand down
@@ -145,7 +153,7 @@ for (const b of stamped.filter((b) => b.t > now && b.t < now + ANNOUNCE_MIN * 60
 }
 
 const next = stamped
-  .filter((b) => b.t > now - 5 * 60_000 && b.t < now + LEAD_MIN * 60_000)
+  .filter((b) => b.t > now - 5 * 60_000 && b.t < now + ARM_WINDOW_MIN * 60_000)
   .sort((a, b) => a.t - b.t)[0];
 
 if (!next) process.exit(0); // nothing within the window — exit silently, launchd re-runs in 5 min
