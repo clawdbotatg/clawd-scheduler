@@ -8,6 +8,15 @@ const { browser, page } = await connectCDP(PORTS.social);
 await page.goto(url, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(5000);
 
+// Rooms now open on a sign-in wall; a peer token only needs an anon guest.
+// Exact button match — a fuzzy /anon/ hits the container and opens the wallet modal.
+const anon = page.locator('button').filter({ hasText: /^\s*sign in as anon\s*$/i }).first();
+if (await anon.isVisible().catch(() => false)) {
+  console.log('sign-in wall: signing in as anon');
+  await anon.click();
+  await page.waitForTimeout(4000);
+}
+
 // Hook clipboard to capture whatever "copy skill" writes.
 await page.evaluate(() => {
   window.__copied = null;
