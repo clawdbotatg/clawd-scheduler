@@ -145,6 +145,11 @@ key + relay env update on the EC2 box.
   + room invite to the clipboard; the USER pastes & sends. NEVER auto-send a private
   link to a guessed Telegram contact (handles ≠ Twitter; misID risk).
 - **Calendar edits save SILENTLY.** Always click "Don't send" — never email the guest.
+- **The calendar invite is NEVER skipped.** It is the only place the guest gets the room
+  link. It goes through the Calendar API (`update-calendar-event-api.mjs`, `CAL_REFRESH_TOKEN`
+  from `node cal-oauth-setup.mjs`, sendUpdates=none). If it fails, fix it or tell Austin in
+  the FIRST line of your reply — never resume past it and bury it in a to-do list
+  (2026-10-20 christine-dkim: the invite was left as a TODO an hour before air).
 - **Scripts tear down their tabs.** CDP `browser.close()` only disconnects — a
   navigated tab lingers in the clone forever (a parked room tab makes the user a
   ghost "participant"). `lib/connect.js` auto-closes the page it opened on

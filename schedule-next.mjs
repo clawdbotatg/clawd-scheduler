@@ -70,11 +70,21 @@ else {
 }
 
 // ---- 1. next TODO episode ---------------------------------------------------
-let guestEmail = null;
+let guestEmail = null, guestName = null;
 if (!HANDLE || !DATE || !TIME) {
   banner('1/6 next calendar episode needing a link');
-  const { findNextSlopNeedingLink } = await import('./workflows/find-next-slop.js');
-  const { nextNeedingLink: ep } = await findNextSlopNeedingLink(Number(SOCIAL));
+  const cal = await import('./lib/cal-api.mjs');
+  let ep;
+  if (cal.haveCalCreds()) {
+    // Calendar API (cookie-free) — the clone's Google session is dead for good.
+    const e = await cal.nextEpisodeNeedingLink();
+    ep = e && { title: e.title, date: e.date, timeRange: e.time };
+    guestEmail = e?.email || null; guestName = e?.name || null;
+    if (e) log(`    (Calendar API) guest: ${e.name || '?'} <${guestEmail || 'no email'}>`);
+  } else {
+    const { findNextSlopNeedingLink } = await import('./workflows/find-next-slop.js');
+    ({ nextNeedingLink: ep } = await findNextSlopNeedingLink(Number(SOCIAL)));
+  }
   if (!ep) die('no upcoming episode has a TODO location — nothing to schedule. (Pass --handle/--date/--time to schedule without a calendar event.)', 0);
   DATE = DATE || ep.date;
   TIME = TIME || (ep.timeRange || '').split('–')[0].trim();
@@ -88,7 +98,18 @@ if (!HANDLE || !DATE || !TIME) {
 
 // ---- 2. guest handle --------------------------------------------------------
 banner('2/6 guest X handle');
-if (!HANDLE) {
+if (!HANDLE && guestEmail) {
+  // API path: resolve from the attendee email (resolve-guest.js scrapes the dead calendar session).
+  let cache = {}; try { cache = JSON.parse(fs.readFileSync('data/guest-twitter.json', 'utf8')); } catch {}
+  if (!cache[guestEmail]) {
+    const name = arg('--name') || guestName || guestEmail.split('@')[0];
+    const org = arg('--org') || guestEmail.split('@')[1].split('.')[0];
+    const r = await node(['resolve-seeded.mjs', guestEmail, name, org]);
+    try { cache = JSON.parse(fs.readFileSync('data/guest-twitter.json', 'utf8')); } catch {}
+    if (!cache[guestEmail]) die(`ASK AUSTIN: no confident X handle for ${guestEmail} — see candidates above. Re-run with --handle <answer> (or --name "Full Name").`, 2);
+  }
+  HANDLE = cache[guestEmail].handle;
+} else if (!HANDLE) {
   const r = await node(['resolve-guest.js']);
   const auto = r.out.match(/AUTO-ACCEPT \(confident\): @(\w+)/) || r.out.match(/CACHE HIT: (\S+) -> @(\w+)/);
   if (r.out.includes('ASK AUSTIN')) die('guest handle needs Austin — see the ASK AUSTIN line above. Re-run with --handle <answer> once confirmed.', 2);
@@ -103,8 +124,9 @@ if (PLAN) { log('\n(plan mode — stopping before any writes. Everything above i
 
 // ---- 3. room ---------------------------------------------------------------
 banner('3/6 room');
-let invite = null;
-{
+let invite = arg('--invite'); // room already made (e.g. via relay API when the clone's admin SIWE is dead)
+if (invite) log(`    using given invite for /${ep.slug}`);
+else {
   const r = await node(['find-room.js', HANDLE]);
   if (!r.out.includes('FOUND:')) {
     const c = await node(['create-room.js', ep.slug]);

@@ -38,6 +38,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { episode, TOKEN, PORTS } from './lib/config.js';
+import { haveCalCreds } from './lib/cal-api.mjs';
 
 const argv = process.argv.slice(2);
 const flag = (n) => argv.includes(`--${n}`);
@@ -87,8 +88,8 @@ const phases = [
     gate: { flag: 'pfp-ok', when: 'before baking the card — VERIFY the pfp is the right person' } },
   { name: 'publish', desc: 'server-side bake + publish the unfurl image',
     cmd: [`publish-card.mjs`, ep.slug, TOK, ep.card] },
-  { name: 'calendar', desc: 'write room link + blurb + questions into the cal event (silent)',
-    cmd: () => { if (!INVITE) throw new Error('calendar needs --invite <roomUrl>'); return [`update-calendar-event.mjs`, '--day', DATE, '--match', MATCH, '--link', INVITE, '--token', TOK, ...(flag('save-calendar') ? ['--save'] : [])]; },
+  { name: 'calendar', desc: 'write room link + blurb + questions into the cal event (silent) — Calendar API when CAL_REFRESH_TOKEN exists, else browser',
+    cmd: () => { if (!INVITE) throw new Error('calendar needs --invite <roomUrl>'); return [haveCalCreds() ? `update-calendar-event-api.mjs` : `update-calendar-event.mjs`, '--day', DATE, '--match', MATCH, '--link', INVITE, '--token', TOK, ...(flag('save-calendar') ? ['--save'] : [])]; },
     gate: { flag: 'save-calendar', when: 'without it this is a DRY RUN (fills, screenshots, does not save)' } },
   { name: 'youtube', desc: `schedule the YouTube broadcast (${DATE} ${TIME}) — API (cookie-free) when creds exist, else browser`,
     cmd: [`schedule-youtube-api.mjs`, ...(flag('submit-youtube') ? ['--submit'] : [])],
@@ -138,6 +139,7 @@ for (const p of list) {
     }
     console.log(`  ✓ ${p.name} done\n`);
   } catch (e) {
+    if (p.name === 'calendar') console.error(`\n!!!!!!!! CALENDAR INVITE NOT UPDATED — the guest has NO room link. !!!!!!!!\n!!!!!!!! Fix it (node cal-oauth-setup.mjs if CAL_REFRESH_TOKEN is missing) or tell Austin FIRST, in one line. Never resume past it silently. !!!!!!!!`);
     console.error(`\n✗ STOP at "${p.name}" (exit ${e.status}). Fix, then resume:\n    node slop-episode.mjs --handle ${ep.handle} --token ${TOK.slice(0, 6)}… --date '${DATE}' --time '${TIME}'${INVITE ? ` --invite ${INVITE}` : ''} --from ${p.name} --go\n`);
     process.exit(e.status || 1);
   }
