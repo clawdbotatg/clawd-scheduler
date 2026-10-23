@@ -162,7 +162,7 @@ Read-only unless marked **WRITE** (those have a confirm/ask gate). `<slug>` and
     - skips if `@handle` is already in the YouTube Upcoming list on that date.
 
 13. **Schedule the X/Twitter livestream**  ·  WRITE  ·  ✅  (idempotent)
-    - `X_HANDLE=.. X_DATE=.. X_TIME=.. X_DURATION_MIN=100 node x-schedule.mjs [--submit]`
+    - `X_HANDLE=.. X_DATE=.. X_TIME=.. X_DURATION_MIN=105 node x-schedule.mjs [--submit]`
     - skips if `@handle` is already in the X Producer scheduled list on that date.
 
 14. **Register the episode on-chain**  ·  WRITE  ·  ✅  ·  **YOU sign the tx**  ·  LAST
@@ -406,7 +406,7 @@ it. (Recon: `recon-category.js`.)
 
 `x-schedule.mjs` drives **X Media Studio → Producer → Create broadcast** on the
 **9223 clone** (Chrome with the user's X login). Env inputs:
-`X_HANDLE X_DATE X_TIME X_DURATION_MIN` (default **100** — X hard-stops the broadcast at its end time and shows often run long, so the end is padded +30 min over the nominal 70; the showtime watcher does the real teardown when the OBS feed ends); `--submit` to actually
+`X_HANDLE X_DATE X_TIME X_DURATION_MIN` (default **105** = 1h45 — X hard-stops the broadcast at its end time and shows often run long, so Austin wants the slack and ends it himself; the showtime watcher does the real teardown when the OBS feed ends); `--submit` to actually
 create. Fields, in order:
 - broadcast name = `episode(handle).title` (same as YouTube)
 - category = **Technology** (typeahead `Add Category`; keyboard fallback)
@@ -501,7 +501,7 @@ the dedicated reschedule scripts, which **edit the existing broadcast in place**
    `.showtime-state/<ytId>.armed`** if the watcher had already armed the old time
    (it also clears itself once it stands down at T+90, see the showtime block).
 3. **X/Twitter:** `X_HANDLE=0xzak X_DATE='Jun 26, 2026' X_TIME='10:30 AM'
-   X_DURATION_MIN=100 node reschedule-x.mjs [--submit]`. Finds the broadcast by
+   X_DURATION_MIN=105 node reschedule-x.mjs [--submit]`. Finds the broadcast by
    `@handle` → opens `/producer/broadcasts/<id>` → sets start, then end → Save.
    **If the old start has already PASSED, X marks the broadcast `TIMED OUT` and
    locks every field** (reschedule-x dies on a disabled datetime button). Then
