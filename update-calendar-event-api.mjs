@@ -9,7 +9,7 @@
 // "Prepare:"/"Wrap up:" blocks; if several remain, the one with a TODO location.
 // Still ambiguous → exits 1 and lists them. Without --save it prints the diff only.
 import { eventsOnDay, patchEvent, getEvent } from './lib/cal-api.mjs';
-import { normDay, INTRO, TITLE_PREFIX } from './lib/cal-text.mjs';
+import { normDay, INTRO, TITLE_PREFIX, rescheduleLine } from './lib/cal-text.mjs';
 
 const args = process.argv.slice(2);
 const arg = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
@@ -37,13 +37,15 @@ const ev = hits[0];
 const q = (await (await fetch('https://live.slop.computer/v1/admin/questions', { headers: { Authorization: `Bearer ${TOKEN}` } })).json()).text || '';
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const toHtml = (s) => esc(s).replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-const description = toHtml(`${INTRO}\n\n${LINK}\n\n${q}`);
+const resched = rescheduleLine(ev.description); // keep the guest's reschedule/cancel link at the bottom
+const description = toHtml(`${INTRO}\n\n${LINK}\n\n${q}${resched ? `\n\n${resched}` : ''}`);
 const summary = (ev.summary || '').startsWith(TITLE_PREFIX) ? ev.summary : TITLE_PREFIX + ev.summary;
 
-console.log(`event: "${ev.summary}" ${ev.start.dateTime}\n  title    → ${summary}\n  location → ${LINK}\n  description → intro + link + ${q.length}-char questions`);
+console.log(`event: "${ev.summary}" ${ev.start.dateTime}\n  title    → ${summary}\n  location → ${LINK}\n  description → intro + link + ${q.length}-char questions + ${resched ? 'reschedule link (kept)' : '⚠ NO reschedule link found in the invite'}`);
 if (!SAVE) { console.log('(dry run — pass --save to write; it never emails the guest)'); process.exit(0); }
 
 await patchEvent(ev.id, { summary, location: LINK, description });
 const back = await getEvent(ev.id);
+if (resched && !rescheduleLine(back.description)) { console.error('✗ saved but the reschedule link is missing from the read-back description'); process.exit(1); }
 if (!(back.location || '').includes(LINK)) { console.error('✗ saved but read-back location does not show the link'); process.exit(1); }
 console.log('✓ calendar saved silently (sendUpdates=none) and read back');

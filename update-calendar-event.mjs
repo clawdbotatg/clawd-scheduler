@@ -12,6 +12,7 @@
 // does not save). With --save it saves silently.
 import { connectCDP } from './lib/connect.js';
 import { PORTS } from './lib/config.js';
+import { rescheduleLine } from './lib/cal-text.mjs';
 
 const args = process.argv.slice(2);
 const arg = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
@@ -103,9 +104,13 @@ try {
 
   // Description → clear, type plain (strip ** markers), then bold each header.
   const desc = page.locator('div[contenteditable="true"][aria-label="Description"]');
+  // keep the guest's reschedule/cancel link (booking app footer) at the bottom
+  const resched = rescheduleLine(await desc.innerText().catch(() => ''));
+  const full = resched ? `${content}\n\n${resched}` : content;
+  console.log(resched ? 'reschedule link kept' : '⚠ NO reschedule link found in the invite');
   await desc.click();
   await page.keyboard.press(`${MOD}+a`); await page.keyboard.press('Backspace');
-  const lines = content.replace(/\t/g, '  ').split('\n');
+  const lines = full.replace(/\t/g, '  ').split('\n');
   for (let i = 0; i < lines.length; i++) {
     const text = lines[i].replace(/\*\*(.*?)\*\*/g, '$1');
     if (text) await page.keyboard.type(text);
